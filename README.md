@@ -1,2 +1,2 @@
 # tick_searches
-Evaluate Google searches as predictor of Lyme disease incidence from 2004-2016. The file tick_searches.md has the code and results. 
+Evaluate Google searches as predictor of Lyme disease incidence from 2004-2016. The file tick_searches.md has the code and results. tick_searches.Rmd is the R markdown file that makes tick_searches.md. Several csv files are included; others are accessed via the Rmd file. 
