@@ -1,106 +1,41 @@
-tick\_searches
-================
-Ilya
-5/13/2018
+---
+title: "tick__searches"
+author: "Ilya"
+date: "5/12/2018"
+output: github_document
+always_allow_html: yes
+---
 
-#### When we go outdoors, we run a risk of coming into contact with ticks that could give us disease-causing pathogens. In the eastern U.S., blacklegged ticks (Ixodes scapularis) transmit the bacterium Borrelia burgdorferi, which causes Lyme disease; in the West Coast, the Western blacklegged tick (Ixodes pacificus) is the vector for Lyme disease. Both of these ticks also transmit pathogens causing other diseases in people and pets. Tick activity varies depending on time of year, weather, wildlife host abundance, and other factors. Knowing the level of risk in our area at a particular time can help us decide what outdoor activities to pursue and what precautions to take (such as checking oneself for ticks after going into tick habitat).
+####When we go outdoors, we run a risk of coming into contact with ticks that could give us disease-causing pathogens. In the eastern U.S., blacklegged ticks (Ixodes scapularis) transmit the bacterium Borrelia burgdorferi, which causes Lyme disease; in the West Coast, the Western blacklegged tick (Ixodes pacificus) is the vector for Lyme disease. Both of these ticks also transmit pathogens causing other diseases in people and pets. Tick activity varies depending on time of year, weather, wildlife host abundance, and other factors. Knowing the level of risk in our area at a particular time can help us decide what outdoor activities to pursue and what precautions to take (such as checking oneself for ticks after going into tick habitat).  
 
-#### Internet search data offer a potential source of real-time information on people's encounters with ticks. If we know people in our area are searching more for ticks, this could be a sign that tick activity is high and we need to be more vigilant against ticks. In evaluating whether internet search data provide a useful measure of disease risk, an important step is determining whether internet search predicts Lyme disease incidence. Here we use Google trends data from 2004 to 2016 to predict Lyme disease incidence in those years. The analysis demonstrates that top searches related to tick bites account for 50% of the variance in Lyme disease incidence. Based on this finding, Google search data appears to be a useful measure of encountering ticks that make us sick. A next step will be identifying variables (e.g., weather) that predict increases in Google searches about tick bites, to enable earlier warning of tick risk.
+####Internet search data offer a potential source of real-time information on people's encounters with ticks. If we know people in our area are searching more for ticks, this could be a sign that tick activity is high and we need to be more vigilant against ticks. In evaluating whether internet search data provide a useful measure of disease risk, an important step is determining whether internet search predicts Lyme disease incidence. Here we use Google trends data from 2004 to 2016 to predict Lyme disease incidence in those years. The analysis demonstrates that top searches related to tick bites account for 50% of the variance in Lyme disease incidence. Based on this finding, Google search data appears to be a useful measure of encountering ticks that make us sick. A next step will be identifying variables (e.g., weather) that predict increases in Google searches about tick bites, to enable earlier warning of tick risk.      
 
-install packages
-================
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-``` r
+#install packages
+```{r}
 list.of.packages <- c("sp", "raster", "leaflet", "geojsonio", "lubridate", "data.table", "dismo", "devtools", "dplyr")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
 print(new.packages)
-```
 
-    ## character(0)
-
-``` r
 library(devtools)
 devtools::install_github("PMassicotte/gtrendsR", branch = "low-search-volume") #use version for getting low search volume regions https://github.com/PMassicotte/gtrendsR/issues/229
-```
-
-    ## Downloading GitHub repo PMassicotte/gtrendsR@master
-    ## from URL https://api.github.com/repos/PMassicotte/gtrendsR/zipball/master
-
-    ## Installing gtrendsR
-
-    ## '/Library/Frameworks/R.framework/Resources/bin/R' --no-site-file  \
-    ##   --no-environ --no-save --no-restore --quiet CMD INSTALL  \
-    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/RtmpPhk3QV/devtools13fb29c2039b/PMassicotte-gtrendsR-08b0edb'  \
-    ##   --library='/Library/Frameworks/R.framework/Versions/3.4/Resources/library'  \
-    ##   --install-tests
-
-    ## 
-
-``` r
 library(gtrendsR) 
 library(sp)
 library(raster)
 library(leaflet)
 library(lubridate)
-```
-
-    ## 
-    ## Attaching package: 'lubridate'
-
-    ## The following object is masked from 'package:base':
-    ## 
-    ##     date
-
-``` r
 library(data.table)
-```
-
-    ## 
-    ## Attaching package: 'data.table'
-
-    ## The following objects are masked from 'package:lubridate':
-    ## 
-    ##     hour, isoweek, mday, minute, month, quarter, second, wday,
-    ##     week, yday, year
-
-    ## The following object is masked from 'package:raster':
-    ## 
-    ##     shift
-
-``` r
 library(dismo)
 library(dplyr)
 ```
 
-    ## 
-    ## Attaching package: 'dplyr'
-
-    ## The following objects are masked from 'package:data.table':
-    ## 
-    ##     between, first, last
-
-    ## The following objects are masked from 'package:lubridate':
-    ## 
-    ##     intersect, setdiff, union
-
-    ## The following objects are masked from 'package:raster':
-    ## 
-    ##     intersect, select, union
-
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
-read in geojson file with nielsen dmas
-======================================
-
-``` r
+#read in geojson file with nielsen dmas  
+```{r}
 #https://rstudio.github.io/leaflet/json.html
 substrRight <- function(x, n){
   substr(x, nchar(x)-n+1, nchar(x))
@@ -113,14 +48,13 @@ dma <- geojsonio::geojson_read("https://rawgit.com/simzou/nielsen-dma/master/nie
 #make map of dmas to make sure they look okay
 pal <- colorNumeric("viridis", NULL)
 
-#commenting this out because it does not display well in github_document
-# leaflet(dma) %>%
-#   addTiles() %>%
-#   addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
-#     fillColor = ~pal(log10(cableperc)),
-#     label = ~paste0(name, ": ", formatC(cableperc, big.mark = ","))) %>%
-#   addLegend(pal = pal, values = ~log10(cableperc), opacity = 1.0,
-#     labFormat = labelFormat(transform = function(x) round(10^x)))
+leaflet(dma) %>%
+  addTiles() %>%
+  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+    fillColor = ~pal(log10(cableperc)),
+    label = ~paste0(name, ": ", formatC(cableperc, big.mark = ","))) %>%
+  addLegend(pal = pal, values = ~log10(cableperc), opacity = 1.0,
+    labFormat = labelFormat(transform = function(x) round(10^x)))
 
 #sort dma by dma1
 dma.df = as.data.frame(dma)
@@ -130,14 +64,12 @@ dma.df$state = substrRight(dma.df$dma1, 2)
 dma.df = dma.df[order(dma.df$state, dma.df$dma1),]
 save(dma.df, file ="dma.df.Rdata")
 write.csv(dma.df, file = "dma.csv")
+
 ```
 
-get google trends data
-======================
-
-##### Note: additional terms may be useful for predicting Lyme disease (e.g., outdoor activities, symptoms, "Lyme disease", wildlife host community). But for this analysis the focus is on terms that reflect encounters with ticks. We used the term "tick bite", and the top 10 related queries for that term. We excluded queries related to tick species other than the blacklegged tick (Ixodes scapularis), and related to tick encounters with pets. We also excluded queries such as "what does tick bite look like", that contain within it other search terms already included (in this case, "tick bite").
-
-``` r
+#get google trends data
+#####Note: additional terms may be useful for predicting Lyme disease (e.g., outdoor activities, symptoms, "Lyme disease", wildlife host community). But for this analysis the focus is on terms that reflect encounters with ticks. We used the term "tick bite", and the top 10 related queries for that term. We excluded queries related to tick species other than the blacklegged tick (Ixodes scapularis), and related to tick encounters with pets. We also excluded queries such as "what does tick bite look like", that contain within it other search terms already included (in this case, "tick bite").  
+```{r}
 #make function for substring
 substrRight <- function(x, n){
   substr(x, nchar(x)-n+1, nchar(x))
@@ -229,23 +161,6 @@ for (a in 1:length(years)){
       rm(gt.ticks)
   out = rbind(out, gt)
 }
-```
-
-    ## [1] 1
-    ## [1] 2
-    ## [1] 3
-    ## [1] 4
-    ## [1] 5
-    ## [1] 6
-    ## [1] 7
-    ## [1] 8
-    ## [1] 9
-    ## [1] 10
-    ## [1] 11
-    ## [1] 12
-    ## [1] 13
-
-``` r
 gt = out
 save(gt, file = "gt.Rdata")
 
@@ -255,10 +170,8 @@ dma.tab = dma.tab[order(dma.tab$state),]
 write.csv(dma.tab, file = "dma.tab.google.csv")
 ```
 
-assign google dma names to dma-county file (do this part in excel, pseudo code here)
-====================================================================================
-
-``` r
+#assign google dma names to dma-county file (do this part in excel, pseudo code here)
+```{r}
 #next: 
 #open dma.csv and  dma.tab.google.csv in excel, 
 #copy in google trends dma names into dma.csv, 
@@ -266,35 +179,14 @@ assign google dma names to dma-county file (do this part in excel, pseudo code h
 #and save dma.csv as dma.google.assigned.by.hand.csv
 ```
 
-read dma json file back in after assigning google trends dma names to it and fixing state abbreviations
-=======================================================================================================
-
-``` r
+#read dma json file back in after assigning google trends dma names to it and fixing state abbreviations
+```{r}
 load("dma.df.Rdata")
 dma.assigned = read.csv( "dma.google.assigned.by.hand.csv")
 dma.assigned = dma.assigned[order(dma.assigned$id),]
 dma.df = dma.df[order(dma.df$id),]
 #check these are all true as error check nothing odd happened
 dma.df$dma1 ==dma.assigned$dma1
-```
-
-    ##   [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [15] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [29] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [43] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [57] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [71] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [85] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [99] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [113] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [127] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [141] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [155] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [169] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [183] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [197] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-
-``` r
 #fix DC
 ind.dc = which(dma.assigned$state == "D)")
 dma.assigned$state = as.character(dma.assigned$state)
@@ -306,10 +198,8 @@ dma.ggl = dma.ggl[,keep.col]
 save(dma.ggl, file = "dma.ggl.Rdata")
 ```
 
-now assign google dmas to counties
-==================================
-
-``` r
+#now assign google dmas to counties
+```{r}
 require(sp)
 load("dma.ggl.Rdata")
 counties <- geojsonio::geojson_read("http://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_050_00_500k.json",
@@ -320,11 +210,7 @@ counties.test <- shapefile("tl_2016_us_county.shp")
 counties = counties.test
 #confirm there is a projetion in counties
 projection(counties)#there is none, but we're not going to use it
-```
 
-    ## [1] "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
-
-``` r
 pal <- colorNumeric("viridis", NULL)
 
 #http://eric.clst.org/tech/usgeojson/
@@ -387,26 +273,20 @@ save(counties, file = "counties.Rdata")
 # issues <- report[report$valid == FALSE,]
 ```
 
-read in CDC Lyme data and reshape
-=================================
 
-``` r
+#read in CDC Lyme data and reshape  
+```{r}
 #website: https://www.cdc.gov/lyme/stats/index.html
 L = read.csv("https://www.cdc.gov/lyme/resources/ld-Case-Counts-by-County-00-16.csv")
 L = reshape(L, direction = "long", varying = 5:21, sep = "")
 dim(L)
-```
-
-    ## [1] 54281     7
-
-``` r
 save(L, file = "L.Rdata")
 ```
 
-read in census data from SEER.
-==============================
 
-``` r
+#read in census data from SEER.  
+```{r}
+
 library(data.table)
 #source: https://seer.cancer.gov/popdata/download.html
 #dictionary for data: https://seer.cancer.gov/popdata/popdic.html
@@ -421,10 +301,8 @@ save(A, file = "A.Rdata")
 # 
 ```
 
-fix population in census data
-=============================
-
-``` r
+#fix population in census data
+```{r}
 library(data.table)
 load("A.Rdata") 
 A$population.2 =  as.numeric(substr(A$population,regexpr("[^0]",A$population),nchar(A$population)))
@@ -451,12 +329,11 @@ A = A[, keep.col]
  A$year = as.numeric(A$year)
  A$population =  as.numeric(substr(A$population,regexpr("[^0]",A$population),nchar(A$population)))
  save(A, file = "A.Rdata")
+
 ```
 
-read in Census data and summarize by year
-=========================================
-
-``` r
+#read in Census data and summarize by year
+```{r}
 load("A.Rdata")
 keep = c("state", "population", "county", "year")
 A1 = A[,keep]
@@ -469,12 +346,12 @@ A2 <- A1 %>%
             state = state[1])
 census = A2
 save(census, file = "census.Rdata")
+
 ```
 
-read back in Census data, reshape long, assign full names of states
-===================================================================
 
-``` r
+#read back in Census data, reshape long, assign full names of states
+```{r}
 load("census.Rdata")
 #names(census)[names(census)=="state"]="state_name"
 names(census)[names(census)=="county"]="county_name"
@@ -486,59 +363,19 @@ states = states[,c(2:3)]
 colnames(states) =c("state_name", "state")
 
 intersect(names(census), names(states))
-```
-
-    ## [1] "state"
-
-``` r
 #add state abbreviation to census data
 census1 = merge(census, states, by = "state")
 #check a few rows
 census = census1
 head(census1)
-```
-
-    ##   state                  county_state year population
-    ## 1    AK  Matanuska-Susitna Borough_AK 2004      70761
-    ## 2    AK Lake and Peninsula Borough_AK 2006       1624
-    ## 3    AK  Hoonah-Angoon Census Area_AK 2015       2118
-    ## 4    AK     Petersburg Census Area_AK 2016       3149
-    ## 5    AK  Matanuska-Susitna Borough_AK 2006      78633
-    ## 6    AK   Yakutat City and Borough_AK 2015        620
-    ##                  county_name state_name
-    ## 1  Matanuska-Susitna Borough     Alaska
-    ## 2 Lake and Peninsula Borough     Alaska
-    ## 3  Hoonah-Angoon Census Area     Alaska
-    ## 4     Petersburg Census Area     Alaska
-    ## 5  Matanuska-Susitna Borough     Alaska
-    ## 6   Yakutat City and Borough     Alaska
-
-``` r
 tail(census1)
-```
-
-    ##       state      county_state year population    county_name    state_name
-    ## 15766    WV  Wetzel County_WV 2008      16645  Wetzel County West Virginia
-    ## 15767    WV Webster County_WV 2004       9612 Webster County West Virginia
-    ## 15768    WV Webster County_WV 2005       9463 Webster County West Virginia
-    ## 15769    WV Webster County_WV 2006       9391 Webster County West Virginia
-    ## 15770    WV Webster County_WV 2007       9260 Webster County West Virginia
-    ## 15771    WV Webster County_WV 2008       9260 Webster County West Virginia
-
-``` r
 length(unique(census$year))
-```
-
-    ## [1] 13
-
-``` r
 save(census, file = "census.Rdata")
+
 ```
 
-combine census and LD data
-==========================
-
-``` r
+#combine census and LD data
+```{r}
 load("census.Rdata")
 load("L.Rdata")
 #make county_name and county_state
@@ -553,47 +390,21 @@ test  = subset(census, is.na(population))#should be empty
 census$county_state=paste(census$county_name, census$state_name, sep = " ")
 
 length(setdiff(L$county_state,census$county_state))
-```
-
-    ## [1] 1979
-
-``` r
 length(setdiff(census$county_state,L$county_state))
-```
-
-    ## [1] 3
-
-``` r
 #seems to be missing Alabama, but that's okay as it's way South so doesn't have much Lyme 
 L1 = merge(census, L, by = intersect(names(census), names(L)))
 L = L1
 L$incidence = 100000*L$Cases/L$population
 length(unique(L$year))
-```
-
-    ## [1] 13
-
-``` r
 save(L, file = "L.Rdata") 
 ```
 
-assign DMA and google trends to Lyme disease data
-=================================================
 
-``` r
+#assign DMA and google trends to Lyme disease data
+```{r}
 require(sp)
 # library(reshape2)
 library(tidyr)
-```
-
-    ## 
-    ## Attaching package: 'tidyr'
-
-    ## The following object is masked from 'package:raster':
-    ## 
-    ##     extract
-
-``` r
 load("L.Rdata")#Lyme
 load("gt.Rdata")
 load("counties.Rdata")
@@ -617,10 +428,8 @@ L = subset(L1, !is.na(incidence))
 save(L, file = "L.Rdata")
 ```
 
-summarize by dma
-================
-
-``` r
+#summarize by dma
+```{r}
 load("L.Rdata")
 library(dplyr)
 L1<-L %>%
@@ -633,20 +442,13 @@ L1<-L %>%
             tick.bites=tick.bites[1],
             ticks = ticks[1])
 summary(L1$incidence.dma)
-```
-
-    ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-    ##   0.0000   0.0000   0.3169   6.8025   1.6384 319.5010
-
-``` r
 #L <- L1
 save(L1, file = "L1.Rdata")
 ```
 
-run boosted regression tree analysis -- analyze at dma-level
-============================================================
 
-``` r
+#run boosted regression tree analysis -- analyze at dma-level 
+```{r}
 load("L1.Rdata")
 #load("L.Rdata")
 library(dismo)
@@ -668,90 +470,9 @@ tc.2.lr.1 <- gbm.step(data=L,
                             tree.complexity = 2,#fit up to two-way interactions
                             learning.rate = 0.01,
                             bag.fraction = 0.8)#recommend between 0.5 and 0.75
-```
-
-    ## Loading required namespace: gbm
-
-    ## 
-    ##  
-    ##  GBM STEP - version 2.9 
-    ##  
-    ## Performing cross-validation optimisation of a boosted regression tree model 
-    ## for incidence.dma and using a family of laplace 
-    ## Using 1872 observations and 4 predictors 
-    ## creating 10 initial models of 50 trees 
-    ## 
-    ##  folds are unstratified 
-    ## total mean deviance =  10.5083 
-    ## tolerance is fixed at  0.0105 
-    ## ntrees resid. dev. 
-    ## 50    6.3742 
-    ## now adding trees... 
-    ## 100   6.1519 
-    ## 150   6.0322 
-    ## 200   5.9733 
-    ## 250   5.9472 
-    ## 300   5.9228 
-    ## 350   5.9042 
-    ## 400   5.8865 
-    ## 450   5.8716 
-    ## 500   5.8657 
-    ## 550   5.8595 
-    ## 600   5.8558 
-    ## 650   5.8531 
-    ## 700   5.8427 
-    ## 750   5.8386 
-    ## 800   5.8371 
-    ## 850   5.8321 
-    ## 900   5.8308 
-    ## 950   5.8291 
-    ## 1000   5.826 
-    ## 1050   5.8211 
-    ## 1100   5.8181 
-    ## 1150   5.8147 
-    ## 1200   5.8108 
-    ## 1250   5.8069 
-    ## 1300   5.8027 
-    ## 1350   5.7994 
-    ## 1400   5.7956 
-    ## 1450   5.7941 
-    ## 1500   5.7916 
-    ## 1550   5.7923 
-    ## 1600   5.791 
-    ## 1650   5.791 
-    ## 1700   5.7903 
-    ## 1750   5.7892 
-    ## 1800   5.7878 
-    ## 1850   5.7902 
-    ## 1900   5.7895 
-    ## 1950   5.7886 
-    ## 2000   5.7885 
-    ## 2050   5.7878 
-    ## 2100   5.786
-
-    ## fitting final gbm model with a fixed number of 2100 trees for incidence.dma
-
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-1.png)
-
-    ## 
-    ## mean total deviance = 10.508 
-    ## mean residual deviance = 5.355 
-    ##  
-    ## estimated cv deviance = 5.786 ; se = 0.316 
-    ##  
-    ## training data correlation = 0.568 
-    ## cv correlation =  0.548 ; se = 0.053 
-    ##  
-    ## elapsed time -  0.19 minutes
-
-``` r
 #check names of columns used as predictors: 
 x = summary(tc.2.lr.1)
-```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-2.png)
-
-``` r
 #write results to csv
 x.df= data.frame(variable = x$var, 
                  relative.influence = x$rel.inf)
@@ -760,39 +481,19 @@ write.csv(x.df, file = "relative.influence.csv")
 #check number of trees
 ntrees = tc.2.lr.1$n.trees
 print(ntrees)#made 
-```
-
-    ## [1] 2100
-
-``` r
 print(x.df)
-```
-
-    ##     variable relative.influence
-    ## 1  tick.bite             72.591
-    ## 2  deer.tick             16.036
-    ## 3      ticks              9.056
-    ## 4 tick.bites              2.317
-
-``` r
 #deviance explained: 
 percent.dev.explained = 100*(13.132 - 6.456)/13.132#50.8% of deviance explained
 L1 = L
 save(L1, file = "L1.Rdata")
 ```
 
-for now do not simplify model, on basis that all non-zero terms are interesting; some terms may be more important in certain DMAs than their importance across the whole U.S.
-=============================================================================================================================================================================
+#for now do not simplify model, on basis that all non-zero terms are interesting; some terms may be more important in certain DMAs than their importance across the whole U.S.  
 
-make plot from fit from gbm
-===========================
+#make plot from fit from gbm
+```{r}
 
-``` r
 gbm.plot(tc.2.lr.1, n.plots=4, write.title = TRUE)
-```
-
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-16-1.png)
-
-``` r
 rm(list = ls())
+
 ```
