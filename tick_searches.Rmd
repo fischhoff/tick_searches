@@ -48,13 +48,14 @@ dma <- geojsonio::geojson_read("https://rawgit.com/simzou/nielsen-dma/master/nie
 #make map of dmas to make sure they look okay
 pal <- colorNumeric("viridis", NULL)
 
-leaflet(dma) %>%
-  addTiles() %>%
-  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
-    fillColor = ~pal(log10(cableperc)),
-    label = ~paste0(name, ": ", formatC(cableperc, big.mark = ","))) %>%
-  addLegend(pal = pal, values = ~log10(cableperc), opacity = 1.0,
-    labFormat = labelFormat(transform = function(x) round(10^x)))
+#commenting this out because it does not display well in github_document
+# leaflet(dma) %>%
+#   addTiles() %>%
+#   addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+#     fillColor = ~pal(log10(cableperc)),
+#     label = ~paste0(name, ": ", formatC(cableperc, big.mark = ","))) %>%
+#   addLegend(pal = pal, values = ~log10(cableperc), opacity = 1.0,
+#     labFormat = labelFormat(transform = function(x) round(10^x)))
 
 #sort dma by dma1
 dma.df = as.data.frame(dma)
@@ -70,6 +71,7 @@ write.csv(dma.df, file = "dma.csv")
 #get google trends data
 #####Note: additional terms may be useful for predicting Lyme disease (e.g., outdoor activities, symptoms, "Lyme disease", wildlife host community). But for this analysis the focus is on terms that reflect encounters with ticks. We used the term "tick bite", and the top 10 related queries for that term. We excluded queries related to tick species other than the blacklegged tick (Ixodes scapularis), and related to tick encounters with pets. We also excluded queries such as "what does tick bite look like", that contain within it other search terms already included (in this case, "tick bite").  
 ```{r}
+
 #make function for substring
 substrRight <- function(x, n){
   substr(x, nchar(x)-n+1, nchar(x))
