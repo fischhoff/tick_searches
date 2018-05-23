@@ -32,7 +32,7 @@ devtools::install_github("PMassicotte/gtrendsR", branch = "low-search-volume") #
 
     ## '/Library/Frameworks/R.framework/Resources/bin/R' --no-site-file  \
     ##   --no-environ --no-save --no-restore --quiet CMD INSTALL  \
-    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/RtmpPhk3QV/devtools13fb29c2039b/PMassicotte-gtrendsR-08b0edb'  \
+    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/Rtmp1qiAFb/devtoolse1b0c1495e/PMassicotte-gtrendsR-08b0edb'  \
     ##   --library='/Library/Frameworks/R.framework/Versions/3.4/Resources/library'  \
     ##   --install-tests
 
@@ -185,20 +185,6 @@ for (a in 1:length(years)){
     gt.deer.tick$location == gt$location
     gt$deer.tick = gt.deer.tick$deer.tick
     rm(gt.deer.tick)
-  
-    #tick.bite.look.like 
-      # gt.tick.bite.look.like <- gtrends(keyword = "what does tick bite look like", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
-      #                         low_search_volume = TRUE)
-      # gt.tick.bite.look.like$interest_by_dma$state = substrRight(gt.tick.bite.look.like$interest_by_dma$location, 2)
-      # gt.tick.bite.look.like$interest_by_dma$year = year.lag.2[a]+2
-      # gt.tick.bite.look.like = gt.tick.bite.look.like$interest_by_dma
-      # gt.tick.bite.look.like = gt.tick.bite.look.like[order(gt.tick.bite.look.like$location),]
-      # gt.tick.bite.look.like$tick.bite.look.like = gt.tick.bite.look.like$hits
-      # gt.tick.bite.look.like = gt.tick.bite.look.like[,c("location","tick.bite.look.like", "state", "year")]
-      # #now add to gt
-      # gt.tick.bite.look.like$location == gt$location
-      # gt$tick.bite.look.like = gt.tick.bite.look.like$tick.bite.look.like
-      # rm(gt.tick.bite.look.like)
 
       #tick.bites 
       gt.tick.bites <- gtrends(keyword = "tick bites", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
@@ -227,7 +213,51 @@ for (a in 1:length(years)){
       gt.ticks$location == gt$location
       gt$ticks = gt.ticks$ticks
       rm(gt.ticks)
-  out = rbind(out, gt)
+
+      #repellent 
+    gt.repellent <- gtrends(keyword = "repellent", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
+                        low_search_volume = TRUE)
+    gt.repellent$interest_by_dma$state = substrRight(gt.repellent$interest_by_dma$location, 2)
+    gt.repellent$interest_by_dma$year = year.lag.2[a]+2
+    gt.repellent = gt.repellent$interest_by_dma
+    gt.repellent = gt.repellent[order(gt.repellent$location),]
+    gt.repellent$repellent = gt.repellent$hits
+    gt.repellent = gt.repellent[,c("location","repellent", "state", "year")]
+    #now add to gt
+    gt.repellent$location == gt$location
+    gt$repellent = gt.repellent$repellent
+    rm(gt.repellent)
+
+    #hiking 
+    gt.hiking <- gtrends(keyword = "hiking", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
+                        low_search_volume = TRUE)
+    gt.hiking$interest_by_dma$state = substrRight(gt.hiking$interest_by_dma$location, 2)
+    gt.hiking$interest_by_dma$year = year.lag.2[a]+2
+    gt.hiking = gt.hiking$interest_by_dma
+    gt.hiking = gt.hiking[order(gt.hiking$location),]
+    gt.hiking$hiking = gt.hiking$hits
+    gt.hiking = gt.hiking[,c("location","hiking", "state", "year")]
+    #now add to gt
+    gt.hiking$location == gt$location
+    gt$hiking = gt.hiking$hiking
+    rm(gt.hiking)
+
+    #deet 
+    gt.deet <- gtrends(keyword = "deet", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
+                        low_search_volume = TRUE)
+    gt.deet$interest_by_dma$state = substrRight(gt.deet$interest_by_dma$location, 2)
+    gt.deet$interest_by_dma$year = year.lag.2[a]+2
+    gt.deet = gt.deet$interest_by_dma
+    gt.deet = gt.deet[order(gt.deet$location),]
+    gt.deet$deet = gt.deet$hits
+    gt.deet = gt.deet[,c("location","deet", "state", "year")]
+    #now add to gt
+    gt.deet$location == gt$location
+    gt$deet = gt.deet$deet
+    rm(gt.deet)
+    out = rbind(out, gt)
+
+
 }
 ```
 
@@ -610,7 +640,7 @@ L = merge(L,counties.df)
 #assign google trends to L
 gt = subset(gt, !is.na(gt$year))
 names(gt)[names(gt)=="location"]="dma.ggl"
-gt = gt[,c("dma.ggl", "year", "deer.tick", "tick.bite", "ticks", "tick.bites")]
+gt = gt[,c("dma.ggl", "year", "deer.tick", "tick.bite", "ticks", "tick.bites", "repellent", "deet", "hiking")]
 L1 = merge(L, gt, by = c("dma.ggl", "year"))
 
 L = subset(L1, !is.na(incidence))
@@ -631,7 +661,10 @@ L1<-L %>%
             deer.tick = deer.tick[1],
             tick.bite = tick.bite[1],
             tick.bites=tick.bites[1],
-            ticks = ticks[1])
+            ticks = ticks[1], 
+            repellent = repellent[1],
+            hiking = hiking[1],
+            deet = deet[1])
 summary(L1$incidence.dma)
 ```
 
@@ -648,26 +681,36 @@ run boosted regression tree analysis -- analyze at dma-level
 
 ``` r
 load("L1.Rdata")
-#load("L.Rdata")
 library(dismo)
-keep.col = c("incidence.dma", "deer.tick", "tick.bite", "ticks", "tick.bites")
 L = L1
-L = L[, keep.col]
-#to do: figure out whether it is appropriate to change NAs to 0s
-# L$ticks[is.na(L$ticks)]=0
-# L$deer.tick[is.na(L$deer.tick)]=0
-# L$tick.bite[is.na(L$tick.bite)]=0
-# L$tick.bites[is.na(L$tick.bites)]=0
+L$deer.tick = as.numeric(as.character(L$deer.tick))
+L$dma.ggl = factor(L$dma.ggl)
 L = data.frame(L)#have to change back from tibble to data.frame!!
-
+indices = seq(from = 1, to = dim(L)[1])
 set.seed(1234)
-tc.2.lr.1 <- gbm.step(data=L,
-                            gbm.x = 2:5, 
+
+indices = sample(indices, replace=FALSE)
+L$rand = indices
+#holdout cutoff
+h.cutoff = round(0.2*max(L$rand))
+#training cutoff 
+t.cutoff = h.cutoff+1
+
+Test = subset(L, rand<=h.cutoff)
+keep.col = c("incidence.dma", "deer.tick", "tick.bite", "ticks", "tick.bites", "hiking", "deet", "repellent")
+Test = Test[, keep.col]
+
+save(Test, file = "Test.Rdata")
+Train = subset(L, rand>=t.cutoff)
+Train = Train[, keep.col]
+
+tc.2.lr.1 <- gbm.step(data=Train,
+                            gbm.x = 2:8, 
                             gbm.y = 1,#incidence
-                            family = "laplace",#using laplace because incidence is skewed (laplace optimizes around median)
+                            family = "gaussian",
                             tree.complexity = 2,#fit up to two-way interactions
-                            learning.rate = 0.01,
-                            bag.fraction = 0.8)#recommend between 0.5 and 0.75
+                            learning.rate = 0.001,
+                            bag.fraction = 0.75)#recommend between 0.5 and 0.75
 ```
 
     ## Loading required namespace: gbm
@@ -677,75 +720,94 @@ tc.2.lr.1 <- gbm.step(data=L,
     ##  GBM STEP - version 2.9 
     ##  
     ## Performing cross-validation optimisation of a boosted regression tree model 
-    ## for incidence.dma and using a family of laplace 
-    ## Using 1872 observations and 4 predictors 
+    ## for incidence.dma and using a family of gaussian 
+    ## Using 1498 observations and 7 predictors 
     ## creating 10 initial models of 50 trees 
     ## 
     ##  folds are unstratified 
-    ## total mean deviance =  10.5083 
-    ## tolerance is fixed at  0.0105 
+    ## total mean deviance =  617.9509 
+    ## tolerance is fixed at  0.618 
     ## ntrees resid. dev. 
-    ## 50    6.3742 
+    ## 50    606.7934 
     ## now adding trees... 
-    ## 100   6.1519 
-    ## 150   6.0322 
-    ## 200   5.9733 
-    ## 250   5.9472 
-    ## 300   5.9228 
-    ## 350   5.9042 
-    ## 400   5.8865 
-    ## 450   5.8716 
-    ## 500   5.8657 
-    ## 550   5.8595 
-    ## 600   5.8558 
-    ## 650   5.8531 
-    ## 700   5.8427 
-    ## 750   5.8386 
-    ## 800   5.8371 
-    ## 850   5.8321 
-    ## 900   5.8308 
-    ## 950   5.8291 
-    ## 1000   5.826 
-    ## 1050   5.8211 
-    ## 1100   5.8181 
-    ## 1150   5.8147 
-    ## 1200   5.8108 
-    ## 1250   5.8069 
-    ## 1300   5.8027 
-    ## 1350   5.7994 
-    ## 1400   5.7956 
-    ## 1450   5.7941 
-    ## 1500   5.7916 
-    ## 1550   5.7923 
-    ## 1600   5.791 
-    ## 1650   5.791 
-    ## 1700   5.7903 
-    ## 1750   5.7892 
-    ## 1800   5.7878 
-    ## 1850   5.7902 
-    ## 1900   5.7895 
-    ## 1950   5.7886 
-    ## 2000   5.7885 
-    ## 2050   5.7878 
-    ## 2100   5.786
+    ## 100   596.1055 
+    ## 150   586.0309 
+    ## 200   577.2497 
+    ## 250   569.042 
+    ## 300   561.5313 
+    ## 350   554.8046 
+    ## 400   548.3425 
+    ## 450   542.7753 
+    ## 500   537.2552 
+    ## 550   532.3432 
+    ## 600   527.6631 
+    ## 650   523.3763 
+    ## 700   519.5406 
+    ## 750   516.1505 
+    ## 800   512.9202 
+    ## 850   509.9944 
+    ## 900   507.202 
+    ## 950   504.7719 
+    ## 1000   502.3634 
+    ## 1050   500.1684 
+    ## 1100   498.0884 
+    ## 1150   496.1674 
+    ## 1200   494.4443 
+    ## 1250   492.9411 
+    ## 1300   491.4888 
+    ## 1350   490.2557 
+    ## 1400   489.1376 
+    ## 1450   488.2319 
+    ## 1500   487.3388 
+    ## 1550   486.3294 
+    ## 1600   485.4879 
+    ## 1650   484.735 
+    ## 1700   484.1053 
+    ## 1750   483.5254 
+    ## 1800   482.9865 
+    ## 1850   482.4877 
+    ## 1900   482.1564 
+    ## 1950   481.7834 
+    ## 2000   481.469 
+    ## 2050   481.2082 
+    ## 2100   480.9306 
+    ## 2150   480.7396 
+    ## 2200   480.4518 
+    ## 2250   480.2562 
+    ## 2300   480.1651 
+    ## 2350   480.0225 
+    ## 2400   480.0366 
+    ## 2450   479.9479 
+    ## 2500   479.9767 
+    ## 2550   479.9532 
+    ## 2600   479.8144 
+    ## 2650   479.8861 
+    ## 2700   479.9031 
+    ## 2750   479.7881 
+    ## 2800   479.7225 
+    ## 2850   479.7378 
+    ## 2900   479.8452 
+    ## 2950   479.7994 
+    ## 3000   479.8812
 
-    ## fitting final gbm model with a fixed number of 2100 trees for incidence.dma
+    ## fitting final gbm model with a fixed number of 2800 trees for incidence.dma
 
 ![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-1.png)
 
     ## 
-    ## mean total deviance = 10.508 
-    ## mean residual deviance = 5.355 
+    ## mean total deviance = 617.951 
+    ## mean residual deviance = 391.966 
     ##  
-    ## estimated cv deviance = 5.786 ; se = 0.316 
+    ## estimated cv deviance = 479.723 ; se = 111.38 
     ##  
-    ## training data correlation = 0.568 
-    ## cv correlation =  0.548 ; se = 0.053 
+    ## training data correlation = 0.619 
+    ## cv correlation =  0.501 ; se = 0.051 
     ##  
-    ## elapsed time -  0.19 minutes
+    ## elapsed time -  0.23 minutes
 
 ``` r
 #check names of columns used as predictors: 
+save(tc.2.lr.1, file = "tc.2.lr.1.Rdata")
 x = summary(tc.2.lr.1)
 ```
 
@@ -762,37 +824,74 @@ ntrees = tc.2.lr.1$n.trees
 print(ntrees)#made 
 ```
 
-    ## [1] 2100
+    ## [1] 2800
 
 ``` r
 print(x.df)
 ```
 
     ##     variable relative.influence
-    ## 1  tick.bite             72.591
-    ## 2  deer.tick             16.036
-    ## 3      ticks              9.056
-    ## 4 tick.bites              2.317
+    ## 1  deer.tick             42.577
+    ## 2  tick.bite             28.187
+    ## 3      ticks             11.893
+    ## 4  repellent              7.497
+    ## 5 tick.bites              6.951
+    ## 6     hiking              2.202
+    ## 7       deet              0.695
+
+for now not simplifying model -- on basis that different terms may be relevant to different places
+==================================================================================================
 
 ``` r
-#deviance explained: 
-percent.dev.explained = 100*(13.132 - 6.456)/13.132#50.8% of deviance explained
-L1 = L
-save(L1, file = "L1.Rdata")
+#dismo/gbm: simplify model by lower learning rate allowing for as many drops as possible
+# tc.2.lr.1.simp <- gbm.simplify(tc.2.lr.1)
+# summary(tc.2.lr.1.simp)
+# tc.2.lr.1.simp$final.drops
 ```
-
-for now do not simplify model, on basis that all non-zero terms are interesting; some terms may be more important in certain DMAs than their importance across the whole U.S.
-=============================================================================================================================================================================
 
 make plot from fit from gbm
 ===========================
 
 ``` r
-gbm.plot(tc.2.lr.1, n.plots=4, write.title = TRUE)
+load("tc.2.lr.1.Rdata")
+gbm.plot(tc.2.lr.1, n.plots=7, write.title = TRUE)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-16-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-17-1.png)
 
 ``` r
-rm(list = ls())
+#rm(list = ls())
 ```
+
+Find mean-squared error for test data
+=====================================
+
+``` r
+load("tc.2.lr.1.Rdata")
+load("Test.Rdata")
+
+yhat.boost=predict(tc.2.lr.1,newdata=Test,n.trees = tc.2.lr.1$n.trees)
+mse = mean((yhat.boost-Test$incidence.dma)^2)
+mse_sqrt = sqrt(mse)
+print("square root of mean squared error")
+```
+
+    ## [1] "square root of mean squared error"
+
+``` r
+mse_sqrt
+```
+
+    ## [1] 14.71692
+
+``` r
+print("mean incidence")
+```
+
+    ## [1] "mean incidence"
+
+``` r
+mean(Test$incidence.dma)
+```
+
+    ## [1] 6.301157

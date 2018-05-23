@@ -119,20 +119,6 @@ for (a in 1:length(years)){
     gt.deer.tick$location == gt$location
     gt$deer.tick = gt.deer.tick$deer.tick
     rm(gt.deer.tick)
-  
-    #tick.bite.look.like 
-      # gt.tick.bite.look.like <- gtrends(keyword = "what does tick bite look like", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
-      #                         low_search_volume = TRUE)
-      # gt.tick.bite.look.like$interest_by_dma$state = substrRight(gt.tick.bite.look.like$interest_by_dma$location, 2)
-      # gt.tick.bite.look.like$interest_by_dma$year = year.lag.2[a]+2
-      # gt.tick.bite.look.like = gt.tick.bite.look.like$interest_by_dma
-      # gt.tick.bite.look.like = gt.tick.bite.look.like[order(gt.tick.bite.look.like$location),]
-      # gt.tick.bite.look.like$tick.bite.look.like = gt.tick.bite.look.like$hits
-      # gt.tick.bite.look.like = gt.tick.bite.look.like[,c("location","tick.bite.look.like", "state", "year")]
-      # #now add to gt
-      # gt.tick.bite.look.like$location == gt$location
-      # gt$tick.bite.look.like = gt.tick.bite.look.like$tick.bite.look.like
-      # rm(gt.tick.bite.look.like)
 
       #tick.bites 
       gt.tick.bites <- gtrends(keyword = "tick bites", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
@@ -161,7 +147,51 @@ for (a in 1:length(years)){
       gt.ticks$location == gt$location
       gt$ticks = gt.ticks$ticks
       rm(gt.ticks)
-  out = rbind(out, gt)
+
+      #repellent 
+    gt.repellent <- gtrends(keyword = "repellent", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
+                        low_search_volume = TRUE)
+    gt.repellent$interest_by_dma$state = substrRight(gt.repellent$interest_by_dma$location, 2)
+    gt.repellent$interest_by_dma$year = year.lag.2[a]+2
+    gt.repellent = gt.repellent$interest_by_dma
+    gt.repellent = gt.repellent[order(gt.repellent$location),]
+    gt.repellent$repellent = gt.repellent$hits
+    gt.repellent = gt.repellent[,c("location","repellent", "state", "year")]
+    #now add to gt
+    gt.repellent$location == gt$location
+    gt$repellent = gt.repellent$repellent
+    rm(gt.repellent)
+
+    #hiking 
+    gt.hiking <- gtrends(keyword = "hiking", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
+                        low_search_volume = TRUE)
+    gt.hiking$interest_by_dma$state = substrRight(gt.hiking$interest_by_dma$location, 2)
+    gt.hiking$interest_by_dma$year = year.lag.2[a]+2
+    gt.hiking = gt.hiking$interest_by_dma
+    gt.hiking = gt.hiking[order(gt.hiking$location),]
+    gt.hiking$hiking = gt.hiking$hits
+    gt.hiking = gt.hiking[,c("location","hiking", "state", "year")]
+    #now add to gt
+    gt.hiking$location == gt$location
+    gt$hiking = gt.hiking$hiking
+    rm(gt.hiking)
+
+    #deet 
+    gt.deet <- gtrends(keyword = "deet", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
+                        low_search_volume = TRUE)
+    gt.deet$interest_by_dma$state = substrRight(gt.deet$interest_by_dma$location, 2)
+    gt.deet$interest_by_dma$year = year.lag.2[a]+2
+    gt.deet = gt.deet$interest_by_dma
+    gt.deet = gt.deet[order(gt.deet$location),]
+    gt.deet$deet = gt.deet$hits
+    gt.deet = gt.deet[,c("location","deet", "state", "year")]
+    #now add to gt
+    gt.deet$location == gt$location
+    gt$deet = gt.deet$deet
+    rm(gt.deet)
+    out = rbind(out, gt)
+
+
 }
 gt = out
 save(gt, file = "gt.Rdata")
@@ -423,7 +453,7 @@ L = merge(L,counties.df)
 #assign google trends to L
 gt = subset(gt, !is.na(gt$year))
 names(gt)[names(gt)=="location"]="dma.ggl"
-gt = gt[,c("dma.ggl", "year", "deer.tick", "tick.bite", "ticks", "tick.bites")]
+gt = gt[,c("dma.ggl", "year", "deer.tick", "tick.bite", "ticks", "tick.bites", "repellent", "deet", "hiking")]
 L1 = merge(L, gt, by = c("dma.ggl", "year"))
 
 L = subset(L1, !is.na(incidence))
@@ -442,7 +472,10 @@ L1<-L %>%
             deer.tick = deer.tick[1],
             tick.bite = tick.bite[1],
             tick.bites=tick.bites[1],
-            ticks = ticks[1])
+            ticks = ticks[1], 
+            repellent = repellent[1],
+            hiking = hiking[1],
+            deet = deet[1])
 summary(L1$incidence.dma)
 #L <- L1
 save(L1, file = "L1.Rdata")
@@ -452,27 +485,38 @@ save(L1, file = "L1.Rdata")
 #run boosted regression tree analysis -- analyze at dma-level 
 ```{r}
 load("L1.Rdata")
-#load("L.Rdata")
 library(dismo)
-keep.col = c("incidence.dma", "deer.tick", "tick.bite", "ticks", "tick.bites")
 L = L1
-L = L[, keep.col]
-#to do: figure out whether it is appropriate to change NAs to 0s
-# L$ticks[is.na(L$ticks)]=0
-# L$deer.tick[is.na(L$deer.tick)]=0
-# L$tick.bite[is.na(L$tick.bite)]=0
-# L$tick.bites[is.na(L$tick.bites)]=0
+L$deer.tick = as.numeric(as.character(L$deer.tick))
+L$dma.ggl = factor(L$dma.ggl)
 L = data.frame(L)#have to change back from tibble to data.frame!!
-
+indices = seq(from = 1, to = dim(L)[1])
 set.seed(1234)
-tc.2.lr.1 <- gbm.step(data=L,
-                            gbm.x = 2:5, 
+
+indices = sample(indices, replace=FALSE)
+L$rand = indices
+#holdout cutoff
+h.cutoff = round(0.2*max(L$rand))
+#training cutoff 
+t.cutoff = h.cutoff+1
+
+Test = subset(L, rand<=h.cutoff)
+keep.col = c("incidence.dma", "deer.tick", "tick.bite", "ticks", "tick.bites", "hiking", "deet", "repellent")
+Test = Test[, keep.col]
+
+save(Test, file = "Test.Rdata")
+Train = subset(L, rand>=t.cutoff)
+Train = Train[, keep.col]
+
+tc.2.lr.1 <- gbm.step(data=Train,
+                            gbm.x = 2:8, 
                             gbm.y = 1,#incidence
-                            family = "laplace",#using laplace because incidence is skewed (laplace optimizes around median)
+                            family = "gaussian",
                             tree.complexity = 2,#fit up to two-way interactions
-                            learning.rate = 0.01,
-                            bag.fraction = 0.8)#recommend between 0.5 and 0.75
+                            learning.rate = 0.001,
+                            bag.fraction = 0.75)#recommend between 0.5 and 0.75
 #check names of columns used as predictors: 
+save(tc.2.lr.1, file = "tc.2.lr.1.Rdata")
 x = summary(tc.2.lr.1)
 
 #write results to csv
@@ -484,19 +528,37 @@ write.csv(x.df, file = "relative.influence.csv")
 ntrees = tc.2.lr.1$n.trees
 print(ntrees)#made 
 print(x.df)
-#deviance explained: 
-percent.dev.explained = 100*(13.132 - 6.456)/13.132#50.8% of deviance explained
-L1 = L
-save(L1, file = "L1.Rdata")
+
 ```
 
-#for now do not simplify model, on basis that all non-zero terms are interesting; some terms may be more important in certain DMAs than their importance across the whole U.S.  
+#for now not simplifying model -- on basis that different terms may be relevant to different places
+```{r}
+#dismo/gbm: simplify model by lower learning rate allowing for as many drops as possible
+# tc.2.lr.1.simp <- gbm.simplify(tc.2.lr.1)
+# summary(tc.2.lr.1.simp)
+# tc.2.lr.1.simp$final.drops
+
+```
+
 
 #make plot from fit from gbm
 ```{r}
+load("tc.2.lr.1.Rdata")
+gbm.plot(tc.2.lr.1, n.plots=7, write.title = TRUE)
+#rm(list = ls())
+```
 
-gbm.plot(tc.2.lr.1, n.plots=4, write.title = TRUE)
-rm(list = ls())
+#Find mean-squared error for test data
+```{r}
+load("tc.2.lr.1.Rdata")
+load("Test.Rdata")
 
+yhat.boost=predict(tc.2.lr.1,newdata=Test,n.trees = tc.2.lr.1$n.trees)
+mse = mean((yhat.boost-Test$incidence.dma)^2)
+mse_sqrt = sqrt(mse)
+print("square root of mean squared error")
+mse_sqrt
+print("mean incidence")
+mean(Test$incidence.dma)
 ```
 
