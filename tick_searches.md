@@ -11,40 +11,24 @@ install packages
 ================
 
 ``` r
-list.of.packages <- c("sp", "raster", "leaflet", "geojsonio", "lubridate", "data.table", "dismo", "devtools", "dplyr")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages)
-
-print(new.packages)
+pkgTest <- function(x)
+{
+  if (x %in% rownames(installed.packages()) == FALSE) {
+    install.packages(x, dependencies= TRUE)    
+  }
+  library(x, character.only = TRUE)
+}
+neededPackages <- c("sp", "raster", "leaflet", "geojsonio", "lubridate", "data.table", "devtools", "dplyr", "gbm", "caret", "cowplot", "ggplot2", 
+                      "ggstance")
+for (package in neededPackages){pkgTest(package)}
 ```
-
-    ## character(0)
-
-``` r
-library(devtools)
-devtools::install_github("PMassicotte/gtrendsR", branch = "low-search-volume") #use version for getting low search volume regions https://github.com/PMassicotte/gtrendsR/issues/229
-```
-
-    ## Downloading GitHub repo PMassicotte/gtrendsR@master
-    ## from URL https://api.github.com/repos/PMassicotte/gtrendsR/zipball/master
-
-    ## Installing gtrendsR
-
-    ## '/Library/Frameworks/R.framework/Resources/bin/R' --no-site-file  \
-    ##   --no-environ --no-save --no-restore --quiet CMD INSTALL  \
-    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/Rtmp1qiAFb/devtoolse1b0c1495e/PMassicotte-gtrendsR-08b0edb'  \
-    ##   --library='/Library/Frameworks/R.framework/Versions/3.4/Resources/library'  \
-    ##   --install-tests
 
     ## 
+    ## Attaching package: 'geojsonio'
 
-``` r
-library(gtrendsR) 
-library(sp)
-library(raster)
-library(leaflet)
-library(lubridate)
-```
+    ## The following object is masked from 'package:base':
+    ## 
+    ##     pretty
 
     ## 
     ## Attaching package: 'lubridate'
@@ -52,10 +36,6 @@ library(lubridate)
     ## The following object is masked from 'package:base':
     ## 
     ##     date
-
-``` r
-library(data.table)
-```
 
     ## 
     ## Attaching package: 'data.table'
@@ -69,10 +49,12 @@ library(data.table)
     ## 
     ##     shift
 
-``` r
-library(dismo)
-library(dplyr)
-```
+    ## 
+    ## Attaching package: 'devtools'
+
+    ## The following object is masked from 'package:geojsonio':
+    ## 
+    ##     lint
 
     ## 
     ## Attaching package: 'dplyr'
@@ -96,6 +78,61 @@ library(dplyr)
     ## The following objects are masked from 'package:base':
     ## 
     ##     intersect, setdiff, setequal, union
+
+    ## Loading required package: survival
+
+    ## Loading required package: lattice
+
+    ## Loading required package: splines
+
+    ## Loading required package: parallel
+
+    ## Loaded gbm 2.1.3
+
+    ## Loading required package: ggplot2
+
+    ## 
+    ## Attaching package: 'caret'
+
+    ## The following object is masked from 'package:survival':
+    ## 
+    ##     cluster
+
+    ## 
+    ## Attaching package: 'cowplot'
+
+    ## The following object is masked from 'package:ggplot2':
+    ## 
+    ##     ggsave
+
+    ## 
+    ## Attaching package: 'ggstance'
+
+    ## The following objects are masked from 'package:ggplot2':
+    ## 
+    ##     geom_errorbarh, GeomErrorbarh
+
+``` r
+library(devtools)
+devtools::install_github("PMassicotte/gtrendsR", branch = "low-search-volume") #use version for getting low search volume regions https://github.com/PMassicotte/gtrendsR/issues/229
+```
+
+    ## Downloading GitHub repo PMassicotte/gtrendsR@master
+    ## from URL https://api.github.com/repos/PMassicotte/gtrendsR/zipball/master
+
+    ## Installing gtrendsR
+
+    ## '/Library/Frameworks/R.framework/Resources/bin/R' --no-site-file  \
+    ##   --no-environ --no-save --no-restore --quiet CMD INSTALL  \
+    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/RtmpYKTjjd/devtools3afbaf206b3/PMassicotte-gtrendsR-3e04749'  \
+    ##   --library='/Library/Frameworks/R.framework/Versions/3.4/Resources/library'  \
+    ##   --install-tests
+
+    ## 
+
+``` r
+library(gtrendsR) 
+```
 
 read in geojson file with nielsen dmas
 ======================================
@@ -342,8 +379,8 @@ now assign google dmas to counties
 ``` r
 require(sp)
 load("dma.ggl.Rdata")
-counties <- geojsonio::geojson_read("http://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_050_00_500k.json",
-  what = "sp")
+#counties <- geojsonio::geojson_read("http://eric.clst.org/assets/wiki/uploads/Stuff/gz#_2010_us_050_00_500k.json",
+#  what = "sp")
 
 #https://catalog.data.gov/dataset/us-counties/resource/cc1b2e44-d5a4-4c26-82c1-39b0da37bfb8
 counties.test <- shapefile("tl_2016_us_county.shp")
@@ -401,6 +438,7 @@ fps = fread("https://www2.census.gov/geo/docs/reference/state.txt")
 fps = fps[,c("STATE", "STUSAB", "STATE_NAME")]
 names(fps)[names(fps)=="STATE"]="STATEFP"
 
+counties$STATEFP = as.numeric(as.character(counties$STATEFP))
 counties = merge(counties,fps, by.x = "STATEFP", by.y = "STATEFP")
 save(counties, file = "counties.Rdata")
 
@@ -468,26 +506,32 @@ A = A[, keep.col]
  fps = data.frame(fps)
  keep.col = c("state", "county", "county_fps")
  fps = fps[, keep.col]
+ A$county_fps=as.numeric(as.character(A$county_fps))
+
  test = setdiff(A$county_fps, fps$county_fps )
  A.test = subset(A, county_fps %in% test)
+ #A.test$county_fps = as.numeric(as.character(A.test$county_fps))
  #merge to add county field
- A.test2 = merge(A.test, fps)
- A2 = merge(A, fps, by = intersect(names(A), names(fps)))
+ A.test$county = NA
+ #A.test2 = merge(A.test, fps, by = intersect(names(A.test), names(fps)))
+  A2 = merge(A, fps, by = intersect(names(A), names(fps)))
 #
- A3 = rbind(A2, A.test2)
+ A3 = rbind(A2, A.test)
 #
  A = A3
 #
  A$year = as.numeric(A$year)
  A$population =  as.numeric(substr(A$population,regexpr("[^0]",A$population),nchar(A$population)))
- save(A, file = "A.Rdata")
+ A2 = A
+ save(A2, file = "A2.Rdata")
 ```
 
 read in Census data and summarize by year
 =========================================
 
 ``` r
-load("A.Rdata")
+load("A2.Rdata")
+A = A2
 keep = c("state", "population", "county", "year")
 A1 = A[,keep]
 
@@ -529,31 +573,38 @@ head(census1)
 ```
 
     ##   state                  county_state year population
-    ## 1    AK  Matanuska-Susitna Borough_AK 2004      70761
-    ## 2    AK Lake and Peninsula Borough_AK 2006       1624
-    ## 3    AK  Hoonah-Angoon Census Area_AK 2015       2118
-    ## 4    AK     Petersburg Census Area_AK 2016       3149
-    ## 5    AK  Matanuska-Susitna Borough_AK 2006      78633
-    ## 6    AK   Yakutat City and Borough_AK 2015        620
+    ## 1    AK     Dillingham Census Area_AK 2009       4776
+    ## 2    AK Lake and Peninsula Borough_AK 2008       1606
+    ## 3    AK  Matanuska-Susitna Borough_AK 2010      89766
+    ## 4    AK           Nome Census Area_AK 2010       9536
+    ## 5    AK             Haines Borough_AK 2013       2551
+    ## 6    AK           Nome Census Area_AK 2012       9873
     ##                  county_name state_name
-    ## 1  Matanuska-Susitna Borough     Alaska
+    ## 1     Dillingham Census Area     Alaska
     ## 2 Lake and Peninsula Borough     Alaska
-    ## 3  Hoonah-Angoon Census Area     Alaska
-    ## 4     Petersburg Census Area     Alaska
-    ## 5  Matanuska-Susitna Borough     Alaska
-    ## 6   Yakutat City and Borough     Alaska
+    ## 3  Matanuska-Susitna Borough     Alaska
+    ## 4           Nome Census Area     Alaska
+    ## 5             Haines Borough     Alaska
+    ## 6           Nome Census Area     Alaska
 
 ``` r
 tail(census1)
 ```
 
-    ##       state      county_state year population    county_name    state_name
-    ## 15766    WV  Wetzel County_WV 2008      16645  Wetzel County West Virginia
-    ## 15767    WV Webster County_WV 2004       9612 Webster County West Virginia
-    ## 15768    WV Webster County_WV 2005       9463 Webster County West Virginia
-    ## 15769    WV Webster County_WV 2006       9391 Webster County West Virginia
-    ## 15770    WV Webster County_WV 2007       9260 Webster County West Virginia
-    ## 15771    WV Webster County_WV 2008       9260 Webster County West Virginia
+    ##       state          county_state year population        county_name
+    ## 39917    WY Hot Springs County_WY 2005       4604 Hot Springs County
+    ## 39918    WY    Campbell County_WY 2004      36907    Campbell County
+    ## 39919    WY Hot Springs County_WY 2008       4698 Hot Springs County
+    ## 39920    WY Hot Springs County_WY 2004       4629 Hot Springs County
+    ## 39921    WY    Sublette County_WY 2004       7072    Sublette County
+    ## 39922    WY Hot Springs County_WY 2006       4632 Hot Springs County
+    ##       state_name
+    ## 39917    Wyoming
+    ## 39918    Wyoming
+    ## 39919    Wyoming
+    ## 39920    Wyoming
+    ## 39921    Wyoming
+    ## 39922    Wyoming
 
 ``` r
 length(unique(census$year))
@@ -585,13 +636,13 @@ census$county_state=paste(census$county_name, census$state_name, sep = " ")
 length(setdiff(L$county_state,census$county_state))
 ```
 
-    ## [1] 1979
+    ## [1] 125
 
 ``` r
 length(setdiff(census$county_state,L$county_state))
 ```
 
-    ## [1] 3
+    ## [1] 7
 
 ``` r
 #seems to be missing Alabama, but that's okay as it's way South so doesn't have much Lyme 
@@ -635,13 +686,14 @@ counties = counties[,keep.col]
 counties.df = data.frame(counties)
 names(counties.df)=tolower(names(counties.df))
 
-L = merge(L,counties.df)
+#lose some AL counties here
+Lc = merge(L,counties.df)
 
 #assign google trends to L
 gt = subset(gt, !is.na(gt$year))
 names(gt)[names(gt)=="location"]="dma.ggl"
 gt = gt[,c("dma.ggl", "year", "deer.tick", "tick.bite", "ticks", "tick.bites", "repellent", "deet", "hiking")]
-L1 = merge(L, gt, by = c("dma.ggl", "year"))
+L1 = merge(Lc, gt, by = c("dma.ggl", "year"))
 
 L = subset(L1, !is.na(incidence))
 save(L, file = "L.Rdata")
@@ -664,12 +716,13 @@ L1<-L %>%
             ticks = ticks[1], 
             repellent = repellent[1],
             hiking = hiking[1],
-            deet = deet[1])
+            deet = deet[1],
+            state = state[1])
 summary(L1$incidence.dma)
 ```
 
     ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-    ##   0.0000   0.0000   0.3169   6.8025   1.6384 319.5010
+    ##   0.0000   0.0000   0.4248   7.8521   1.6906 268.9252
 
 ``` r
 #L <- L1
@@ -680,138 +733,47 @@ run boosted regression tree analysis -- analyze at dma-level
 ============================================================
 
 ``` r
+set.seed(1234)
+
 load("L1.Rdata")
-library(dismo)
+
+#library(dismo)
 L = L1
 L$deer.tick = as.numeric(as.character(L$deer.tick))
 L$dma.ggl = factor(L$dma.ggl)
 L = data.frame(L)#have to change back from tibble to data.frame!!
-indices = seq(from = 1, to = dim(L)[1])
-set.seed(1234)
-
-indices = sample(indices, replace=FALSE)
-L$rand = indices
-#holdout cutoff
-h.cutoff = round(0.2*max(L$rand))
-#training cutoff 
-t.cutoff = h.cutoff+1
-
-Test = subset(L, rand<=h.cutoff)
+L$state = factor(L$state)
 keep.col = c("incidence.dma", "deer.tick", "tick.bite", "ticks", "tick.bites", "hiking", "deet", "repellent")
-Test = Test[, keep.col]
 
+
+DP =createDataPartition(L1$Cases.dma, p = 0.8)
+Train = L[DP$Resample1,]
+Test = L[-DP$Resample1,]
 save(Test, file = "Test.Rdata")
-Train = subset(L, rand>=t.cutoff)
-Train = Train[, keep.col]
 
-tc.2.lr.1 <- gbm.step(data=Train,
-                            gbm.x = 2:8, 
-                            gbm.y = 1,#incidence
-                            family = "gaussian",
-                            tree.complexity = 2,#fit up to two-way interactions
-                            learning.rate = 0.001,
-                            bag.fraction = 0.75)#recommend between 0.5 and 0.75
+ntrees = 3000
+gbm.dma = gbm(data=Train,
+                            Cases.dma ~deer.tick + tick.bite+ ticks+ tick.bites+pop.dma,
+                            distribution = "poisson",#default
+                            n.trees = ntrees,#fit up to two-way interactions
+                            shrinkage = 0.01,
+                            interaction.depth = 4,
+                            bag.fraction = 0.5)#default 
+
+print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
 ```
 
-    ## Loading required namespace: gbm
-
-    ## 
-    ##  
-    ##  GBM STEP - version 2.9 
-    ##  
-    ## Performing cross-validation optimisation of a boosted regression tree model 
-    ## for incidence.dma and using a family of gaussian 
-    ## Using 1498 observations and 7 predictors 
-    ## creating 10 initial models of 50 trees 
-    ## 
-    ##  folds are unstratified 
-    ## total mean deviance =  617.9509 
-    ## tolerance is fixed at  0.618 
-    ## ntrees resid. dev. 
-    ## 50    606.7934 
-    ## now adding trees... 
-    ## 100   596.1055 
-    ## 150   586.0309 
-    ## 200   577.2497 
-    ## 250   569.042 
-    ## 300   561.5313 
-    ## 350   554.8046 
-    ## 400   548.3425 
-    ## 450   542.7753 
-    ## 500   537.2552 
-    ## 550   532.3432 
-    ## 600   527.6631 
-    ## 650   523.3763 
-    ## 700   519.5406 
-    ## 750   516.1505 
-    ## 800   512.9202 
-    ## 850   509.9944 
-    ## 900   507.202 
-    ## 950   504.7719 
-    ## 1000   502.3634 
-    ## 1050   500.1684 
-    ## 1100   498.0884 
-    ## 1150   496.1674 
-    ## 1200   494.4443 
-    ## 1250   492.9411 
-    ## 1300   491.4888 
-    ## 1350   490.2557 
-    ## 1400   489.1376 
-    ## 1450   488.2319 
-    ## 1500   487.3388 
-    ## 1550   486.3294 
-    ## 1600   485.4879 
-    ## 1650   484.735 
-    ## 1700   484.1053 
-    ## 1750   483.5254 
-    ## 1800   482.9865 
-    ## 1850   482.4877 
-    ## 1900   482.1564 
-    ## 1950   481.7834 
-    ## 2000   481.469 
-    ## 2050   481.2082 
-    ## 2100   480.9306 
-    ## 2150   480.7396 
-    ## 2200   480.4518 
-    ## 2250   480.2562 
-    ## 2300   480.1651 
-    ## 2350   480.0225 
-    ## 2400   480.0366 
-    ## 2450   479.9479 
-    ## 2500   479.9767 
-    ## 2550   479.9532 
-    ## 2600   479.8144 
-    ## 2650   479.8861 
-    ## 2700   479.9031 
-    ## 2750   479.7881 
-    ## 2800   479.7225 
-    ## 2850   479.7378 
-    ## 2900   479.8452 
-    ## 2950   479.7994 
-    ## 3000   479.8812
-
-    ## fitting final gbm model with a fixed number of 2800 trees for incidence.dma
-
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-1.png)
-
-    ## 
-    ## mean total deviance = 617.951 
-    ## mean residual deviance = 391.966 
-    ##  
-    ## estimated cv deviance = 479.723 ; se = 111.38 
-    ##  
-    ## training data correlation = 0.619 
-    ## cv correlation =  0.501 ; se = 0.051 
-    ##  
-    ## elapsed time -  0.23 minutes
+    ## [1] 0.9603334
 
 ``` r
 #check names of columns used as predictors: 
-save(tc.2.lr.1, file = "tc.2.lr.1.Rdata")
-x = summary(tc.2.lr.1)
+save(gbm.dma, file = "gbm.dma.Rdata")
+x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-1.png)
 
 ``` r
 #write results to csv
@@ -820,78 +782,41 @@ x.df= data.frame(variable = x$var,
 x.df$relative.influence = round(x.df$relative.influence, digits = 3)
 write.csv(x.df, file = "relative.influence.csv")
 #check number of trees
-ntrees = tc.2.lr.1$n.trees
+ntrees = gbm.dma$n.trees
 print(ntrees)#made 
 ```
 
-    ## [1] 2800
+    ## [1] 3000
 
 ``` r
 print(x.df)
 ```
 
     ##     variable relative.influence
-    ## 1  deer.tick             42.577
-    ## 2  tick.bite             28.187
-    ## 3      ticks             11.893
-    ## 4  repellent              7.497
-    ## 5 tick.bites              6.951
-    ## 6     hiking              2.202
-    ## 7       deet              0.695
-
-for now not simplifying model -- on basis that different terms may be relevant to different places
-==================================================================================================
+    ## 1    pop.dma             56.888
+    ## 2 tick.bites             20.768
+    ## 3  deer.tick             14.352
+    ## 4  tick.bite              6.531
+    ## 5      ticks              1.461
 
 ``` r
-#dismo/gbm: simplify model by lower learning rate allowing for as many drops as possible
-# tc.2.lr.1.simp <- gbm.simplify(tc.2.lr.1)
-# summary(tc.2.lr.1.simp)
-# tc.2.lr.1.simp$final.drops
+ind = which(x.df$variable == "pop.dma")
+variable = as.character(x.df$variable)
+variable[ind]=as.character("population")
+x.df$variable = variable
+search = rep("Google.search", dim(x.df)[1])
+search[x.df$variable == "population"]="population"
+x.df$search = factor(search) 
+ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+#  plot.tmp = ggplot()+
+
+  geom_bar(stat="identity")
 ```
 
-make plot from fit from gbm
-===========================
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-2.png)
 
 ``` r
-load("tc.2.lr.1.Rdata")
-gbm.plot(tc.2.lr.1, n.plots=7, write.title = TRUE)
+ggsave("Figure.search.jpg")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-17-1.png)
-
-``` r
-#rm(list = ls())
-```
-
-Find mean-squared error for test data
-=====================================
-
-``` r
-load("tc.2.lr.1.Rdata")
-load("Test.Rdata")
-
-yhat.boost=predict(tc.2.lr.1,newdata=Test,n.trees = tc.2.lr.1$n.trees)
-mse = mean((yhat.boost-Test$incidence.dma)^2)
-mse_sqrt = sqrt(mse)
-print("square root of mean squared error")
-```
-
-    ## [1] "square root of mean squared error"
-
-``` r
-mse_sqrt
-```
-
-    ## [1] 14.71692
-
-``` r
-print("mean incidence")
-```
-
-    ## [1] "mean incidence"
-
-``` r
-mean(Test$incidence.dma)
-```
-
-    ## [1] 6.301157
+    ## Saving 7 x 5 in image

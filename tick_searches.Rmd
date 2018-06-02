@@ -16,22 +16,21 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #install packages
 ```{r}
-list.of.packages <- c("sp", "raster", "leaflet", "geojsonio", "lubridate", "data.table", "dismo", "devtools", "dplyr")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages)
-
-print(new.packages)
+pkgTest <- function(x)
+{
+  if (x %in% rownames(installed.packages()) == FALSE) {
+    install.packages(x, dependencies= TRUE)    
+  }
+  library(x, character.only = TRUE)
+}
+neededPackages <- c("sp", "raster", "leaflet", "geojsonio", "lubridate", "data.table", "devtools", "dplyr", "gbm", "caret", "cowplot", "ggplot2", 
+                      "ggstance")
+for (package in neededPackages){pkgTest(package)}
 
 library(devtools)
 devtools::install_github("PMassicotte/gtrendsR", branch = "low-search-volume") #use version for getting low search volume regions https://github.com/PMassicotte/gtrendsR/issues/229
 library(gtrendsR) 
-library(sp)
-library(raster)
-library(leaflet)
-library(lubridate)
-library(data.table)
-library(dismo)
-library(dplyr)
+
 ```
 
 #read in geojson file with nielsen dmas  
@@ -234,8 +233,8 @@ save(dma.ggl, file = "dma.ggl.Rdata")
 ```{r}
 require(sp)
 load("dma.ggl.Rdata")
-counties <- geojsonio::geojson_read("http://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_050_00_500k.json",
-  what = "sp")
+#counties <- geojsonio::geojson_read("http://eric.clst.org/assets/wiki/uploads/Stuff/gz#_2010_us_050_00_500k.json",
+#  what = "sp")
 
 #https://catalog.data.gov/dataset/us-counties/resource/cc1b2e44-d5a4-4c26-82c1-39b0da37bfb8
 counties.test <- shapefile("tl_2016_us_county.shp")
@@ -289,6 +288,7 @@ fps = fread("https://www2.census.gov/geo/docs/reference/state.txt")
 fps = fps[,c("STATE", "STUSAB", "STATE_NAME")]
 names(fps)[names(fps)=="STATE"]="STATEFP"
 
+counties$STATEFP = as.numeric(as.character(counties$STATEFP))
 counties = merge(counties,fps, by.x = "STATEFP", by.y = "STATEFP")
 save(counties, file = "counties.Rdata")
 
@@ -348,25 +348,31 @@ A = A[, keep.col]
  fps = data.frame(fps)
  keep.col = c("state", "county", "county_fps")
  fps = fps[, keep.col]
+ A$county_fps=as.numeric(as.character(A$county_fps))
+
  test = setdiff(A$county_fps, fps$county_fps )
  A.test = subset(A, county_fps %in% test)
+ #A.test$county_fps = as.numeric(as.character(A.test$county_fps))
  #merge to add county field
- A.test2 = merge(A.test, fps)
- A2 = merge(A, fps, by = intersect(names(A), names(fps)))
+ A.test$county = NA
+ #A.test2 = merge(A.test, fps, by = intersect(names(A.test), names(fps)))
+  A2 = merge(A, fps, by = intersect(names(A), names(fps)))
 #
- A3 = rbind(A2, A.test2)
+ A3 = rbind(A2, A.test)
 #
  A = A3
 #
  A$year = as.numeric(A$year)
  A$population =  as.numeric(substr(A$population,regexpr("[^0]",A$population),nchar(A$population)))
- save(A, file = "A.Rdata")
+ A2 = A
+ save(A2, file = "A2.Rdata")
 
 ```
 
 #read in Census data and summarize by year
 ```{r}
-load("A.Rdata")
+load("A2.Rdata")
+A = A2
 keep = c("state", "population", "county", "year")
 A1 = A[,keep]
 
@@ -448,13 +454,14 @@ counties = counties[,keep.col]
 counties.df = data.frame(counties)
 names(counties.df)=tolower(names(counties.df))
 
-L = merge(L,counties.df)
+#lose some AL counties here
+Lc = merge(L,counties.df)
 
 #assign google trends to L
 gt = subset(gt, !is.na(gt$year))
 names(gt)[names(gt)=="location"]="dma.ggl"
 gt = gt[,c("dma.ggl", "year", "deer.tick", "tick.bite", "ticks", "tick.bites", "repellent", "deet", "hiking")]
-L1 = merge(L, gt, by = c("dma.ggl", "year"))
+L1 = merge(Lc, gt, by = c("dma.ggl", "year"))
 
 L = subset(L1, !is.na(incidence))
 save(L, file = "L.Rdata")
@@ -475,7 +482,8 @@ L1<-L %>%
             ticks = ticks[1], 
             repellent = repellent[1],
             hiking = hiking[1],
-            deet = deet[1])
+            deet = deet[1],
+            state = state[1])
 summary(L1$incidence.dma)
 #L <- L1
 save(L1, file = "L1.Rdata")
@@ -484,40 +492,40 @@ save(L1, file = "L1.Rdata")
 
 #run boosted regression tree analysis -- analyze at dma-level 
 ```{r}
+set.seed(1234)
+
 load("L1.Rdata")
-library(dismo)
+
+#library(dismo)
 L = L1
 L$deer.tick = as.numeric(as.character(L$deer.tick))
 L$dma.ggl = factor(L$dma.ggl)
 L = data.frame(L)#have to change back from tibble to data.frame!!
-indices = seq(from = 1, to = dim(L)[1])
-set.seed(1234)
-
-indices = sample(indices, replace=FALSE)
-L$rand = indices
-#holdout cutoff
-h.cutoff = round(0.2*max(L$rand))
-#training cutoff 
-t.cutoff = h.cutoff+1
-
-Test = subset(L, rand<=h.cutoff)
+L$state = factor(L$state)
 keep.col = c("incidence.dma", "deer.tick", "tick.bite", "ticks", "tick.bites", "hiking", "deet", "repellent")
-Test = Test[, keep.col]
 
+
+DP =createDataPartition(L1$Cases.dma, p = 0.8)
+Train = L[DP$Resample1,]
+Test = L[-DP$Resample1,]
 save(Test, file = "Test.Rdata")
-Train = subset(L, rand>=t.cutoff)
-Train = Train[, keep.col]
 
-tc.2.lr.1 <- gbm.step(data=Train,
-                            gbm.x = 2:8, 
-                            gbm.y = 1,#incidence
-                            family = "gaussian",
-                            tree.complexity = 2,#fit up to two-way interactions
-                            learning.rate = 0.001,
-                            bag.fraction = 0.75)#recommend between 0.5 and 0.75
+ntrees = 3000
+gbm.dma = gbm(data=Train,
+                            Cases.dma ~deer.tick + tick.bite+ ticks+ tick.bites+pop.dma,
+                            distribution = "poisson",#default
+                            n.trees = ntrees,#fit up to two-way interactions
+                            shrinkage = 0.01,
+                            interaction.depth = 4,
+                            bag.fraction = 0.5)#default 
+
+print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
+
 #check names of columns used as predictors: 
-save(tc.2.lr.1, file = "tc.2.lr.1.Rdata")
-x = summary(tc.2.lr.1)
+save(gbm.dma, file = "gbm.dma.Rdata")
+x = summary(gbm.dma)
 
 #write results to csv
 x.df= data.frame(variable = x$var, 
@@ -525,40 +533,19 @@ x.df= data.frame(variable = x$var,
 x.df$relative.influence = round(x.df$relative.influence, digits = 3)
 write.csv(x.df, file = "relative.influence.csv")
 #check number of trees
-ntrees = tc.2.lr.1$n.trees
+ntrees = gbm.dma$n.trees
 print(ntrees)#made 
 print(x.df)
+ind = which(x.df$variable == "pop.dma")
+variable = as.character(x.df$variable)
+variable[ind]=as.character("population")
+x.df$variable = variable
+search = rep("Google.search", dim(x.df)[1])
+search[x.df$variable == "population"]="population"
+x.df$search = factor(search) 
+ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+#  plot.tmp = ggplot()+
 
+  geom_bar(stat="identity")
+ggsave("Figure.search.jpg")
 ```
-
-#for now not simplifying model -- on basis that different terms may be relevant to different places
-```{r}
-#dismo/gbm: simplify model by lower learning rate allowing for as many drops as possible
-# tc.2.lr.1.simp <- gbm.simplify(tc.2.lr.1)
-# summary(tc.2.lr.1.simp)
-# tc.2.lr.1.simp$final.drops
-
-```
-
-
-#make plot from fit from gbm
-```{r}
-load("tc.2.lr.1.Rdata")
-gbm.plot(tc.2.lr.1, n.plots=7, write.title = TRUE)
-#rm(list = ls())
-```
-
-#Find mean-squared error for test data
-```{r}
-load("tc.2.lr.1.Rdata")
-load("Test.Rdata")
-
-yhat.boost=predict(tc.2.lr.1,newdata=Test,n.trees = tc.2.lr.1$n.trees)
-mse = mean((yhat.boost-Test$incidence.dma)^2)
-mse_sqrt = sqrt(mse)
-print("square root of mean squared error")
-mse_sqrt
-print("mean incidence")
-mean(Test$incidence.dma)
-```
-
