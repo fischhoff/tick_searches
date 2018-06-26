@@ -3,25 +3,18 @@ tick\_searches
 Ilya
 5/13/2018
 
-#### When we go outdoors, we run a risk of coming into contact with ticks that could give us disease-causing pathogens. In the eastern U.S., blacklegged ticks (Ixodes scapularis) transmit the bacterium Borrelia burgdorferi, which causes Lyme disease; in the West Coast, the Western blacklegged tick (Ixodes pacificus) is the vector for Lyme disease. Both of these ticks also transmit pathogens causing other diseases in people and pets. Tick activity varies depending on time of year, weather, wildlife host abundance, and other factors. Knowing the level of risk in our area at a particular time can help us decide what outdoor activities to pursue and what precautions to take (such as checking oneself for ticks after going into tick habitat).
+To do: line 897, run gbm with all variables
+===========================================
 
-#### Internet search data offer a potential source of real-time information on people's encounters with ticks. If we know people in our area are searching more for ticks, this could be a sign that tick activity is high and we need to be more vigilant against ticks. In evaluating whether internet search data provide a useful measure of disease risk, an important step is determining whether internet search predicts Lyme disease incidence. Here we use Google trends data from 2004 to 2016 to predict Lyme disease incidence in those years. The analysis demonstrates that top searches related to tick bites account for 50% of the variance in Lyme disease incidence. Based on this finding, Google search data appears to be a useful measure of encountering ticks that make us sick. A next step will be identifying variables (e.g., weather) that predict increases in Google searches about tick bites, to enable earlier warning of tick risk.
+#### Objective: Predict Lyme disease risk at temporal and spatial scales useful for decision-makers (public health agencies, healthcare providers, members of the public).
 
-install packages
-================
+#### When we go outdoors, we run a risk of coming into contact with ticks that could give us disease-causing pathogens. In the eastern U.S., blacklegged ticks (Ixodes scapularis) transmit the bacterium Borrelia burgdorferi, which causes Lyme disease; in the West Coast, the Western blacklegged tick (Ixodes pacificus) is the vector for Lyme disease. Both of these ticks also transmit pathogens causing other diseases in people and pets. Tick activity varies depending on time of year, weather, wildlife host abundance, and other factors. Knowing the level of risk in our area at a particular time can help us decide what outdoor activities to pursue and what precautions to take (such as checking oneself for ticks after going into tick habitat, use of repellent).
 
-``` r
-pkgTest <- function(x)
-{
-  if (x %in% rownames(installed.packages()) == FALSE) {
-    install.packages(x, dependencies= TRUE)    
-  }
-  library(x, character.only = TRUE)
-}
-neededPackages <- c("sp", "raster", "leaflet", "geojsonio", "lubridate", "data.table", "devtools", "dplyr", "gbm", "caret", "cowplot", "ggplot2", 
-                      "ggstance")
-for (package in neededPackages){pkgTest(package)}
-```
+#### Lyme disease risk arises from two interacting causes: first, the abundance of infected host-seeking blacklegged ticks; and second, human behavior that brings us into proximity of ticks. The abundance of infected ticks seeking hosts, also referred to as entomological risk, is influenced by the wildlife host community in a particular place, landscape characteristics (e.g., forest cover, geographic location), and weather. We are exposed to ticks through our work and recreation. Our risk further depends on the extent to which we apply tick-bite prevention methods.
+
+#### Internet search data offer a source of real-time information on people's encounters with ticks. If we know people in our area are searching more for ticks, this could be a sign that tick activity is high and we need to be more vigilant against ticks. To evaluate whether internet search data provides a useful measure of disease risk, here we use Google trends data from 2004 to 2016 to predict Lyme disease incidence in those years.
+
+##### install packages
 
     ## 
     ## Attaching package: 'geojsonio'
@@ -112,10 +105,12 @@ for (package in neededPackages){pkgTest(package)}
     ## 
     ##     geom_errorbarh, GeomErrorbarh
 
-``` r
-library(devtools)
-devtools::install_github("PMassicotte/gtrendsR", branch = "low-search-volume") #use version for getting low search volume regions https://github.com/PMassicotte/gtrendsR/issues/229
-```
+    ## 
+    ## Attaching package: 'tidyr'
+
+    ## The following object is masked from 'package:raster':
+    ## 
+    ##     extract
 
     ## Downloading GitHub repo PMassicotte/gtrendsR@master
     ## from URL https://api.github.com/repos/PMassicotte/gtrendsR/zipball/master
@@ -124,18 +119,15 @@ devtools::install_github("PMassicotte/gtrendsR", branch = "low-search-volume") #
 
     ## '/Library/Frameworks/R.framework/Resources/bin/R' --no-site-file  \
     ##   --no-environ --no-save --no-restore --quiet CMD INSTALL  \
-    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/RtmpYKTjjd/devtools3afbaf206b3/PMassicotte-gtrendsR-3e04749'  \
+    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/RtmpYVxUgl/devtools12a37351d207b/PMassicotte-gtrendsR-35d98c0'  \
     ##   --library='/Library/Frameworks/R.framework/Versions/3.4/Resources/library'  \
     ##   --install-tests
 
     ## 
 
-``` r
-library(gtrendsR) 
-```
+    ## phantomjs has been installed to /Users/fischhoff/Library/Application Support/PhantomJS
 
-read in geojson file with nielsen dmas
-======================================
+###### read in geojson file with nielsen dmas, plot map of dma with color based on percentage with cable (to check these data make sense)
 
 ``` r
 #https://rstudio.github.io/leaflet/json.html
@@ -151,14 +143,19 @@ dma <- geojsonio::geojson_read("https://rawgit.com/simzou/nielsen-dma/master/nie
 pal <- colorNumeric("viridis", NULL)
 
 #commenting this out because it does not display well in github_document
-# leaflet(dma) %>%
-#   addTiles() %>%
-#   addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
-#     fillColor = ~pal(log10(cableperc)),
-#     label = ~paste0(name, ": ", formatC(cableperc, big.mark = ","))) %>%
-#   addLegend(pal = pal, values = ~log10(cableperc), opacity = 1.0,
-#     labFormat = labelFormat(transform = function(x) round(10^x)))
+dmaMap <- leaflet(dma) %>%
+  addTiles() %>%
+  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+    fillColor = ~pal(log10(cableperc)),
+    label = ~paste0(name, ": ", formatC(cableperc, big.mark = ","))) %>%
+  addLegend(pal = pal, values = ~log10(cableperc), opacity = 1.0,
+    labFormat = labelFormat(transform = function(x) round(10^x)))
+dmaMap
+```
 
+![](tick_searches_files/figure-markdown_github/dma-1.png)
+
+``` r
 #sort dma by dma1
 dma.df = as.data.frame(dma)
 dma.df$dma1 = as.character(dma.df$dma1)
@@ -181,125 +178,112 @@ substrRight <- function(x, n){
 }
 
 years = seq(from = 2004, to = 2016, by = 1)
-year.lag.1 = seq(from = 2004, to = 2015, by =1)
-year.lag.2 = seq(from = 2004, to = 2014, by =1)
-# year.lag.1 = seq(from = 2004, to = 2015, by =1)
+#sequence of years lagged by one year, to be used for terms like chipmunk that should be lagged that way
+year.lag.1 = seq(from = 2003, to = 2015, by =1)
+#sequence of years lagged by two years
+year.lag.2 = seq(from = 2002, to = 2014, by =1)
 
+#make data.frame of start and end day of each year
 start.month.day = rep("01-01",length(years))
 end.month.day = rep("12-31", length(years))
 start.days = paste(as.character(years), start.month.day, sep="-")
 end.days = paste(as.character(years), end.month.day, sep="-")
+lag0=rep(0, length(end.days))
+days_df = data.frame(year = years,
+                     start.days = start.days,
+                     end.days = end.days,
+                     lag = lag0)
+
 start.days.lag1 = paste(as.character(year.lag.1), start.month.day, sep="-")
 end.days.lag1 = paste(as.character(year.lag.1), end.month.day, sep="-")
+lag1=rep(1, length(end.days.lag1))
+days_tmp = data.frame(year = year.lag.1,
+                      start.days = start.days.lag1,
+                      end.days = end.days.lag1,
+                      lag = lag1)
+days_df = rbind(days_df, days_tmp)
 
 start.days.lag2 = paste(as.character(year.lag.2), start.month.day, sep="-")
 end.days.lag2 = paste(as.character(year.lag.2), end.month.day, sep="-")
+lag2=rep(2, length(end.days.lag2))
+days_tmp = data.frame(year = year.lag.2,
+                      start.days = start.days.lag2,
+                      end.days = end.days.lag2,
+                      lag = lag2)
+days_df = rbind(days_df, days_tmp)
+
+terms = c("garden", "mowing", "tick", "hiking", "hunting", "deet", "repellent", "deer tick", "tick bites", "ticks", "chipmunk", "mouse trap",
+           "deer", "acorns", "mouse")
+terms_current_df_field = c("garden", "mowing","tick", "hiking", "hunting", "deet","repellent","deer.tick", "tick bites", "ticks", "chipmunk", "mouse.trap", "deer", "acorns", "mouse")
+lag_seq = c(rep(0,10) ,1,1,2,2,1)
+
+#test set, commenting out for now
+# terms = c("garden",  "chipmunk", "deer")
+# terms_current_df_field = c("garden", "chipmunk", "deer")
+# lag_seq = c(0,1,2)
 
 out = NULL
 a = 1
-#for (a in 1){
+b =1
 for (a in 1:length(years)){
+#for (a in c(1:2)){#test set
   print(a)
-  gt <- gtrends(keyword = "tick bite", geo = c("US"), time = paste(start.days[a], end.days[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
-  low_search_volume = TRUE)
-  gt$interest_by_dma$state = substrRight(gt$interest_by_dma$location, 2)
-  gt$interest_by_dma$year = years[a]
-  gt = gt$interest_by_dma
+    #initialize a data.frame with one search term
+    year_subset= subset(days_df, lag == 0 & year == years[a])
+    gt <- gtrends(keyword = "tick bite", geo = c("US"), time = paste(year_subset$start.days, year_subset$end.days, sep = " "), category = 0, hl = "en-US",
+    low_search_volume = TRUE)
+    #get last two characters for the state
+    gt$interest_by_dma$state = substrRight(gt$interest_by_dma$location, 2)
+    gt$interest_by_dma$year = years[a]
+    gt = gt$interest_by_dma
     gt = gt[order(gt$location),]
+
     gt$tick.bite = gt$hits
+    gt$tick.bite[gt$tick.bite == "<1"]=  1#replace any "<1"
+    gt$tick.bite = as.numeric(as.character(gt$tick.bite))
     gt = gt[,c("location","tick.bite", "state", "year")]
 
-      #deer tick
-            gt.deer.tick <- gtrends(keyword = "deer tick", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
-                       low_search_volume = TRUE)
-    gt.deer.tick$interest_by_dma$state = substrRight(gt.deer.tick$interest_by_dma$location, 2)
-    gt.deer.tick$interest_by_dma$year = year.lag.2[a]+2
-    gt.deer.tick = gt.deer.tick$interest_by_dma
-    gt.deer.tick = gt.deer.tick[order(gt.deer.tick$location),]
-    gt.deer.tick$deer.tick = gt.deer.tick$hits
-    gt.deer.tick = gt.deer.tick[,c("location","deer.tick", "state", "year")]
-    #now add to gt
-    gt.deer.tick$location == gt$location
-    gt$deer.tick = gt.deer.tick$deer.tick
-    rm(gt.deer.tick)
-
-      #tick.bites 
-      gt.tick.bites <- gtrends(keyword = "tick bites", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
-                              low_search_volume = TRUE)
-      gt.tick.bites$interest_by_dma$state = substrRight(gt.tick.bites$interest_by_dma$location, 2)
-      gt.tick.bites$interest_by_dma$year = year.lag.2[a]+2
-      gt.tick.bites = gt.tick.bites$interest_by_dma
-      gt.tick.bites = gt.tick.bites[order(gt.tick.bites$location),]
-      gt.tick.bites$tick.bites = gt.tick.bites$hits
-      gt.tick.bites = gt.tick.bites[,c("location","tick.bites", "state", "year")]
-      #now add to gt
-      gt.tick.bites$location == gt$location
-      gt$tick.bites = gt.tick.bites$tick.bites
-      rm(gt.tick.bites)
-      
-      #ticks 
-      gt.ticks <- gtrends(keyword = "ticks", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
-                              low_search_volume = TRUE)
-      gt.ticks$interest_by_dma$state = substrRight(gt.ticks$interest_by_dma$location, 2)
-      gt.ticks$interest_by_dma$year = year.lag.2[a]+2
-      gt.ticks = gt.ticks$interest_by_dma
-      gt.ticks = gt.ticks[order(gt.ticks$location),]
-      gt.ticks$ticks = gt.ticks$hits
-      gt.ticks = gt.ticks[,c("location","ticks", "state", "year")]
-      #now add to gt
-      gt.ticks$location == gt$location
-      gt$ticks = gt.ticks$ticks
-      rm(gt.ticks)
-
-      #repellent 
-    gt.repellent <- gtrends(keyword = "repellent", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
-                        low_search_volume = TRUE)
-    gt.repellent$interest_by_dma$state = substrRight(gt.repellent$interest_by_dma$location, 2)
-    gt.repellent$interest_by_dma$year = year.lag.2[a]+2
-    gt.repellent = gt.repellent$interest_by_dma
-    gt.repellent = gt.repellent[order(gt.repellent$location),]
-    gt.repellent$repellent = gt.repellent$hits
-    gt.repellent = gt.repellent[,c("location","repellent", "state", "year")]
-    #now add to gt
-    gt.repellent$location == gt$location
-    gt$repellent = gt.repellent$repellent
-    rm(gt.repellent)
-
-    #hiking 
-    gt.hiking <- gtrends(keyword = "hiking", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
-                        low_search_volume = TRUE)
-    gt.hiking$interest_by_dma$state = substrRight(gt.hiking$interest_by_dma$location, 2)
-    gt.hiking$interest_by_dma$year = year.lag.2[a]+2
-    gt.hiking = gt.hiking$interest_by_dma
-    gt.hiking = gt.hiking[order(gt.hiking$location),]
-    gt.hiking$hiking = gt.hiking$hits
-    gt.hiking = gt.hiking[,c("location","hiking", "state", "year")]
-    #now add to gt
-    gt.hiking$location == gt$location
-    gt$hiking = gt.hiking$hiking
-    rm(gt.hiking)
-
-    #deet 
-    gt.deet <- gtrends(keyword = "deet", geo = c("US"), time = paste(start.days.lag1[a], end.days.lag1[a], sep = " "), gprop = c("web"), category = 0, hl = "en-US",
-                        low_search_volume = TRUE)
-    gt.deet$interest_by_dma$state = substrRight(gt.deet$interest_by_dma$location, 2)
-    gt.deet$interest_by_dma$year = year.lag.2[a]+2
-    gt.deet = gt.deet$interest_by_dma
-    gt.deet = gt.deet[order(gt.deet$location),]
-    gt.deet$deet = gt.deet$hits
-    gt.deet = gt.deet[,c("location","deet", "state", "year")]
-    #now add to gt
-    gt.deet$location == gt$location
-    gt$deet = gt.deet$deet
-    rm(gt.deet)
-    out = rbind(out, gt)
-
-
-}
+  for (b in 1:length(terms)){#begin for loop through terms
+    lag_tmp = lag_seq[b]
+    #year
+    year_subset = subset(days_df, lag == lag_tmp & year == (years[a]-lag_tmp))#find the year in question for this term and relevant time lag
+    #only proceed if 2004 or later, else no google trends data
+    if (year_subset$year >=2004){
+      #now can proceed
+            #deer tick
+        gt.tmp <- gtrends(keyword = terms[b], geo = c("US"), time = paste(year_subset$start.days, year_subset$end.days, sep = " "), category = 0, hl = "en-US",
+                           low_search_volume = TRUE)
+        gt.tmp$interest_by_dma$state = substrRight(gt.tmp$interest_by_dma$location, 2)
+        gt.tmp$interest_by_dma$year = years[a]
+        gt.tmp = gt.tmp$interest_by_dma
+        gt.tmp = gt.tmp[order(gt.tmp$location),]
+        gt.tmp$hits[gt.tmp$hits=="<1"]= 1#replace any "<1"
+        gt.tmp$hits = as.numeric(as.character(gt.tmp$hits))
+        gt.tmp[,c(terms_current_df_field[b])]= gt.tmp$hits
+        gt.tmp = gt.tmp[,c("location",terms_current_df_field[b], "state", "year")]
+        #now add to gt
+        #gt.tmp$location == gt$location
+        gt[,c(terms_current_df_field[b])] = gt.tmp[,c(terms_current_df_field[b])]
+        #rm(gt.tmp)
+    } 
+    else if (year_subset$year <2004){
+      print("else")
+      gt[,c(terms_current_df_field[b])]=NA
+    }
+  }#end for loop through terms
+  out = rbind(out, gt)
+}#end for loop through years
 ```
 
     ## [1] 1
+    ## [1] "else"
+    ## [1] "else"
+    ## [1] "else"
+    ## [1] "else"
+    ## [1] "else"
     ## [1] 2
+    ## [1] "else"
+    ## [1] "else"
     ## [1] 3
     ## [1] 4
     ## [1] 5
@@ -322,50 +306,35 @@ dma.tab = dma.tab[order(dma.tab$state),]
 write.csv(dma.tab, file = "dma.tab.google.csv")
 ```
 
-assign google dma names to dma-county file (do this part in excel, pseudo code here)
-====================================================================================
+##### assign google dma names to dma-county file (do this part in excel, pseudo code here)
 
 ``` r
 #next: 
 #open dma.csv and  dma.tab.google.csv in excel, 
 #copy in google trends dma names into dma.csv, 
 #align the two dma name sets, fixing state abbreviations, 
-#and save dma.csv as dma.google.assigned.by.hand.csv
+#and save dma.csv as dma.google.assigned.by.hand2.csv
 ```
 
-read dma json file back in after assigning google trends dma names to it and fixing state abbreviations
-=======================================================================================================
+##### read dma json file back in after assigning google trends dma names to it and fixing state abbreviations
 
 ``` r
 load("dma.df.Rdata")
-dma.assigned = read.csv( "dma.google.assigned.by.hand.csv")
+dma.assigned = read.csv( "dma.google.assigned.by.hand2.csv")
+dma.assigned = subset(dma.assigned, !is.na(id))
+names(dma.assigned)[names(dma.assigned)=="location"]="google.dma"
 dma.assigned = dma.assigned[order(dma.assigned$id),]
 dma.df = dma.df[order(dma.df$id),]
 #check these are all true as error check nothing odd happened
-dma.df$dma1 ==dma.assigned$dma1
+dma.assigned$state = as.character(dma.assigned$state)
+
+inds = which(dma.df$dma1 !=dma.assigned$dma1)
+inds#should be empty
 ```
 
-    ##   [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [15] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [29] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [43] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [57] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [71] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [85] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ##  [99] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [113] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [127] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [141] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [155] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [169] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [183] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-    ## [197] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+    ## integer(0)
 
 ``` r
-#fix DC
-ind.dc = which(dma.assigned$state == "D)")
-dma.assigned$state = as.character(dma.assigned$state)
-dma.assigned$state[ind.dc]= "DC"
 dma.ggl <- dma.assigned
 keep.col = c("latitude","dma","dma1", "longitude", "state", "google.dma")
 dma.ggl = dma.ggl[,keep.col]
@@ -373,14 +342,11 @@ dma.ggl = dma.ggl[,keep.col]
 save(dma.ggl, file = "dma.ggl.Rdata")
 ```
 
-now assign google dmas to counties
-==================================
+##### now assign google dmas to counties
 
 ``` r
 require(sp)
 load("dma.ggl.Rdata")
-#counties <- geojsonio::geojson_read("http://eric.clst.org/assets/wiki/uploads/Stuff/gz#_2010_us_050_00_500k.json",
-#  what = "sp")
 
 #https://catalog.data.gov/dataset/us-counties/resource/cc1b2e44-d5a4-4c26-82c1-39b0da37bfb8
 counties.test <- shapefile("tl_2016_us_county.shp")
@@ -392,17 +358,17 @@ projection(counties)#there is none, but we're not going to use it
     ## [1] "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
 
 ``` r
-pal <- colorNumeric("viridis", NULL)
+#pal <- colorNumeric("viridis", NULL)
 
-#http://eric.clst.org/tech/usgeojson/
 #make map of counties to make sure they look like counties -- commented out to make markdown smaller
-# leaflet(counties) %>%
+# counties_map <-  leaflet(counties) %>%
 #   addTiles() %>%
 #   addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
 #     fillColor = ~pal((as.numeric(STATEFP))),
 #     label = ~paste0(NAME, ": ", formatC(as.numeric(STATEFP), big.mark = ","))) %>%
 #   addLegend(pal = pal, values = ~(as.numeric(STATEFP)), opacity = 1.0,
 #     labFormat = labelFormat(transform = function(x) round(10^x)))
+# counties_map
 
 #read dma in again as polygons (need it to be polygons, not data.frame)
 dma <- geojsonio::geojson_read("https://rawgit.com/simzou/nielsen-dma/master/nielsentopo.json",
@@ -412,10 +378,10 @@ dma <- geojsonio::geojson_read("https://rawgit.com/simzou/nielsen-dma/master/nie
 # dma_project <- projection(dma, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
 
 #then assign google dma name
-#male version of dma.ggl w/ only relevant columns
+#make version of dma.ggl w/ only relevant columns
 dma.ggl.sm = dma.ggl[,c("dma1","google.dma")]
 #merge dma with dma.ggl.sm, assigning google dma name
-#http://www.nickeubank.com/wp-content/uploads/2015/10/RGIS2_MergingSpatialData_part1_Joins.html#spatial-non-spatial
+#source: http://www.nickeubank.com/wp-content/uploads/2015/10/RGIS2_MergingSpatialData_part1_Joins.html#spatial-non-spatial
 #doing this with merge messes it up w/ respect to holes in polygons, so instead use for loop
 # dma = merge(dma,dma.ggl.sm, by.x = "dma1", by.y = "dma1")
 dma$dma.google = NA
@@ -423,7 +389,7 @@ udma = unique(dma$dma1)
 a = 1
 for (a in 1:length(udma)){
   ind = which(dma$dma1==udma[a])
-  ind.google = which(dma.ggl.sm$dma1==udma[a])
+  ind.google = which(as.character(dma.ggl.sm$dma1)==udma[a])
   dma$dma.google[ind]= as.character(dma.ggl.sm$google.dma[ind.google])
 }
 
@@ -433,13 +399,32 @@ projection(counties) <- projection(dma)#package raster
 #this does not work if identical CRS(x,y) is not true
 counties$dma.ggl <- over( counties, dma)$dma.google#name of dma
 
-#read in fps codes
+#read in fps codes, in order to assign abbreviated and long state name to counties
 fps = fread("https://www2.census.gov/geo/docs/reference/state.txt")
 fps = fps[,c("STATE", "STUSAB", "STATE_NAME")]
 names(fps)[names(fps)=="STATE"]="STATEFP"
 
+setdiff(names(fps), names(counties))
+```
+
+    ## [1] "STUSAB"     "STATE_NAME"
+
+``` r
 counties$STATEFP = as.numeric(as.character(counties$STATEFP))
+dim(counties)
+```
+
+    ## [1] 3233   18
+
+``` r
 counties = merge(counties,fps, by.x = "STATEFP", by.y = "STATEFP")
+
+dim(counties)#confirm no counties are lost
+```
+
+    ## [1] 3233   20
+
+``` r
 save(counties, file = "counties.Rdata")
 
 #used this below to check for holes, and found them in dma when it had a projection assigned (which resulted in function over failing)
@@ -455,8 +440,7 @@ save(counties, file = "counties.Rdata")
 # issues <- report[report$valid == FALSE,]
 ```
 
-read in CDC Lyme data and reshape
-=================================
+##### read in CDC Lyme data and reshape
 
 ``` r
 #website: https://www.cdc.gov/lyme/stats/index.html
@@ -471,8 +455,7 @@ dim(L)
 save(L, file = "L.Rdata")
 ```
 
-read in census data from SEER.
-==============================
+##### read in census data from SEER.
 
 ``` r
 library(data.table)
@@ -497,56 +480,89 @@ library(data.table)
 load("A.Rdata") 
 A$population.2 =  as.numeric(substr(A$population,regexpr("[^0]",A$population),nchar(A$population)))
  A$population = A$population.2
- keep.col = c("V1", "year", "state", "county_fps", "population")
+ #make field with state followed by county_fps -- make as numeric to get rid of leading 0s so it matches up with fps next
+A$state_countyfps = paste(A$state, as.numeric(as.character(A$county_fps)))
+ length(unique(A$state_countyfps))
+```
+
+    ## [1] 3155
+
+``` r
+ keep.col = c("V1", "year", "state", "county_fps", "population", "state_countyfps")
 A = A[, keep.col]
 
 # #county fps
  fps = fread("https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt")
+ #assign meaningful names
  names(fps)= c("state", "statefp", "county_fps", "county", "classfp")
  fps = data.frame(fps)
- keep.col = c("state", "county", "county_fps")
+ keep.col = c("state", "county", "county_fps", "statefp")
  fps = fps[, keep.col]
- A$county_fps=as.numeric(as.character(A$county_fps))
+ fps$state_countyfps = paste(fps$state, fps$county_fps)
+ #commenting this out because there each county_fps may be used in multiple states -- not unique nationally 
+ #A$county_fps=as.numeric(as.character(A$county_fps))
 
- test = setdiff(A$county_fps, fps$county_fps )
- A.test = subset(A, county_fps %in% test)
- #A.test$county_fps = as.numeric(as.character(A.test$county_fps))
- #merge to add county field
- A.test$county = NA
- #A.test2 = merge(A.test, fps, by = intersect(names(A.test), names(fps)))
-  A2 = merge(A, fps, by = intersect(names(A), names(fps)))
-#
- A3 = rbind(A2, A.test)
-#
- A = A3
-#
- A$year = as.numeric(A$year)
- A$population =  as.numeric(substr(A$population,regexpr("[^0]",A$population),nchar(A$population)))
- A2 = A
- save(A2, file = "A2.Rdata")
+ test = setdiff(A$state_countyfps, fps$state_countyfps )
+ A.test = subset(A, state_countyfps %in% test)
+ unique(A.test$state)#includes AK, AZ, CO, HI, VA, KR
 ```
 
-read in Census data and summarize by year
-=========================================
+    ## [1] "AK" "AZ" "CO" "HI" "VA" "KR"
 
 ``` r
-load("A2.Rdata")
-A = A2
-keep = c("state", "population", "county", "year")
+ #A.test$county_fps = as.numeric(as.character(A.test$county_fps))
+ #to merge need to add county field
+ #A.test$county = NA#14 counties in A don't have match in fps 
+ #A.test$statefp = NA
+ 
+ A$county_fps=as.numeric(as.character(A$county_fps))#removing trailing ones means can merge by this field (together with state_countyfps and state)
+ #A.test2 = merge(A.test, fps, by = intersect(names(A.test), names(fps)))
+  A2 = merge(A, fps)#need to merge by this field or else some state_countyfps are lost
+  length(unique(A2$state_countyfps))
+```
+
+    ## [1] 3141
+
+``` r
+#
+ #A3 = rbind(A2, A.test)
+# A = A3
+  A3 = A2
+ A3$year = as.numeric(A3$year)
+ A3$population =  as.numeric(substr(A3$population,regexpr("[^0]",A3$population),nchar(A3$population)))
+# A2 = A
+ save(A3, file = "A3.Rdata")
+```
+
+##### read in Census data and summarize by year
+
+``` r
+load("A3.Rdata")
+A = A3
+keep = c("state", "population", "county", "year", "county_fps", "state_countyfps", "statefp")
 A1 = A[,keep]
 
+#now use county_state as group_by variable (as alternative to state_countyfps that is easier to interpret)
 A1$county_state = paste(A1$county, A1$state, sep = "_")
 A2 <- A1 %>%
   group_by(county_state, year) %>%
   summarize(population = sum(population),
             county = county[1], 
-            state = state[1])
+            state = state[1], 
+            state_countyfps = state_countyfps[1],
+            county_fps=county_fps[1],
+            statefp = statefp[1])
+length(unique(A2$state_countyfps))
+```
+
+    ## [1] 3141
+
+``` r
 census = A2
 save(census, file = "census.Rdata")
 ```
 
-read back in Census data, reshape long, assign full names of states
-===================================================================
+##### read back in Census data, reshape long, assign full names of states
 
 ``` r
 load("census.Rdata")
@@ -567,44 +583,44 @@ intersect(names(census), names(states))
 ``` r
 #add state abbreviation to census data
 census1 = merge(census, states, by = "state")
+#loses a few rows
 #check a few rows
-census = census1
 head(census1)
 ```
 
-    ##   state                  county_state year population
-    ## 1    AK     Dillingham Census Area_AK 2009       4776
-    ## 2    AK Lake and Peninsula Borough_AK 2008       1606
-    ## 3    AK  Matanuska-Susitna Borough_AK 2010      89766
-    ## 4    AK           Nome Census Area_AK 2010       9536
-    ## 5    AK             Haines Borough_AK 2013       2551
-    ## 6    AK           Nome Census Area_AK 2012       9873
-    ##                  county_name state_name
-    ## 1     Dillingham Census Area     Alaska
-    ## 2 Lake and Peninsula Borough     Alaska
-    ## 3  Matanuska-Susitna Borough     Alaska
-    ## 4           Nome Census Area     Alaska
-    ## 5             Haines Borough     Alaska
-    ## 6           Nome Census Area     Alaska
+    ##   state                 county_state year population
+    ## 1    AK       North Slope Borough_AK 2016       9606
+    ## 2    AK       Bristol Bay Borough_AK 2016        898
+    ## 3    AK Matanuska-Susitna Borough_AK 2016     104365
+    ## 4    AK    Anchorage Municipality_AK 2013     301143
+    ## 5    AK    Anchorage Municipality_AK 2011     296397
+    ## 6    AK    Anchorage Municipality_AK 2010     293415
+    ##                 county_name state_countyfps county_fps statefp state_name
+    ## 1       North Slope Borough          AK 185        185       2     Alaska
+    ## 2       Bristol Bay Borough           AK 60         60       2     Alaska
+    ## 3 Matanuska-Susitna Borough          AK 170        170       2     Alaska
+    ## 4    Anchorage Municipality           AK 20         20       2     Alaska
+    ## 5    Anchorage Municipality           AK 20         20       2     Alaska
+    ## 6    Anchorage Municipality           AK 20         20       2     Alaska
 
 ``` r
 tail(census1)
 ```
 
-    ##       state          county_state year population        county_name
-    ## 39917    WY Hot Springs County_WY 2005       4604 Hot Springs County
-    ## 39918    WY    Campbell County_WY 2004      36907    Campbell County
-    ## 39919    WY Hot Springs County_WY 2008       4698 Hot Springs County
-    ## 39920    WY Hot Springs County_WY 2004       4629 Hot Springs County
-    ## 39921    WY    Sublette County_WY 2004       7072    Sublette County
-    ## 39922    WY Hot Springs County_WY 2006       4632 Hot Springs County
-    ##       state_name
-    ## 39917    Wyoming
-    ## 39918    Wyoming
-    ## 39919    Wyoming
-    ## 39920    Wyoming
-    ## 39921    Wyoming
-    ## 39922    Wyoming
+    ##       state       county_state year population     county_name
+    ## 39894    WY Washakie County_WY 2005       8022 Washakie County
+    ## 39895    WY  Natrona County_WY 2005      69922  Natrona County
+    ## 39896    WY  Natrona County_WY 2006      70806  Natrona County
+    ## 39897    WY   Weston County_WY 2015       7230   Weston County
+    ## 39898    WY   Carbon County_WY 2004      15236   Carbon County
+    ## 39899    WY  Natrona County_WY 2014      81432  Natrona County
+    ##       state_countyfps county_fps statefp state_name
+    ## 39894           WY 43         43      56    Wyoming
+    ## 39895           WY 25         25      56    Wyoming
+    ## 39896           WY 25         25      56    Wyoming
+    ## 39897           WY 45         45      56    Wyoming
+    ## 39898            WY 7          7      56    Wyoming
+    ## 39899           WY 25         25      56    Wyoming
 
 ``` r
 length(unique(census$year))
@@ -613,14 +629,14 @@ length(unique(census$year))
     ## [1] 13
 
 ``` r
-save(census, file = "census.Rdata")
+save(census1, file = "census1.Rdata")
 ```
 
-combine census and LD data
-==========================
+##### combine census and LD data
 
 ``` r
-load("census.Rdata")
+load("census1.Rdata")
+census = census1
 load("L.Rdata")
 #make county_name and county_state
 names(L)[names(L)=="Ctyname"]="county_name"
@@ -642,7 +658,7 @@ length(setdiff(L$county_state,census$county_state))
 length(setdiff(census$county_state,L$county_state))
 ```
 
-    ## [1] 7
+    ## [1] 5
 
 ``` r
 #seems to be missing Alabama, but that's okay as it's way South so doesn't have much Lyme 
@@ -655,65 +671,606 @@ length(unique(L$year))
     ## [1] 13
 
 ``` r
-save(L, file = "L.Rdata") 
+length(unique(L$state_countyfps))
 ```
 
-assign DMA and google trends to Lyme disease data
-=================================================
+    ## [1] 3068
+
+``` r
+Lcensus = L
+save(Lcensus, file = "Lcensus.Rdata") 
+```
+
+##### assign DMA and google trends to Lyme disease data
 
 ``` r
 require(sp)
-# library(reshape2)
-library(tidyr)
-```
-
-    ## 
-    ## Attaching package: 'tidyr'
-
-    ## The following object is masked from 'package:raster':
-    ## 
-    ##     extract
-
-``` r
-load("L.Rdata")#Lyme
+load("Lcensus.Rdata")#Lyme
+L = Lcensus
+L$county_state=tolower(L$county_state)
 load("gt.Rdata")
 load("counties.Rdata")
 names(counties)[names(counties)=="NAMELSAD"]="county_name"
 names(counties)[names(counties)=="STUSAB"]="state"
-counties$county_state =paste(counties$county_name, counties$STATE_NAME, sep = " ")
+counties$county_state =tolower(paste(counties$county_name, counties$STATE_NAME, sep = " "))
 keep.col = c("dma.ggl", "county_state", "STATEFP"      ,"COUNTYFP", "county_name", "INTPTLAT", "INTPTLON","state"     ,  "STATE_NAME"    )
 counties = counties[,keep.col]
 counties.df = data.frame(counties)
 names(counties.df)=tolower(names(counties.df))
-
+counties.df = counties.df[,c("dma.ggl", "county_state")]
 #lose some AL counties here
-Lc = merge(L,counties.df)
-
-#assign google trends to L
-gt = subset(gt, !is.na(gt$year))
-names(gt)[names(gt)=="location"]="dma.ggl"
-gt = gt[,c("dma.ggl", "year", "deer.tick", "tick.bite", "ticks", "tick.bites", "repellent", "deet", "hiking")]
-L1 = merge(Lc, gt, by = c("dma.ggl", "year"))
-
-L = subset(L1, !is.na(incidence))
-save(L, file = "L.Rdata")
+dim(L)
 ```
 
-summarize by dma
-================
+    ## [1] 39844    11
 
 ``` r
-load("L.Rdata")
+#make version that is numeric
+L$state_county_fp = paste(L$statefp, L$county_fps)
+L =L[,c("county_state", "year", "Cases", "county_name", "state_name", "state", "population", "incidence", "state_county_fp")]
+Lc = merge(L,counties.df,by = intersect(names(L), names(counties.df)))
+dim(Lc)#none are lost
+```
+
+    ## [1] 39844    10
+
+``` r
+#assign google trends to L
+names(gt)[names(gt)=="location"]="dma.ggl"
+gt = gt[,c("dma.ggl", "tick.bite"      , "year"      , "garden"    , "mowing"    , "tick",       "hiking", "hunting"  ,"deet"       ,"repellent",  "deer.tick" , "tick bites", "ticks"   ,   "chipmunk",   "mouse.trap", "deer","acorns", "mouse")]
+L1 = merge(Lc, gt, by = c("dma.ggl", "year"))
+
+#L1 = subset(L1, !is.na(incidence))
+save(L1, file = "L1.Rdata")
+```
+
+##### summarize by county across time for plotting
+
+``` r
+load("L1.Rdata")
+L1$tick.bites = L1[,20]
+names(L1)
+```
+
+    ##  [1] "dma.ggl"         "year"            "county_state"   
+    ##  [4] "Cases"           "county_name"     "state_name"     
+    ##  [7] "state"           "population"      "incidence"      
+    ## [10] "state_county_fp" "tick.bite"       "garden"         
+    ## [13] "mowing"          "tick"            "hiking"         
+    ## [16] "hunting"         "deet"            "repellent"      
+    ## [19] "deer.tick"       "tick bites"      "ticks"          
+    ## [22] "chipmunk"        "mouse.trap"      "deer"           
+    ## [25] "acorns"          "mouse"           "tick.bites"
+
+``` r
+# terms_current_df_field = c("garden", "mowing","tick", "hiking", "hunting", "deet","repellent","deer.tick", "tick bites", "ticks", "chipmunk", "mouse.trap", "deer", "acorns")
+
+L1$tick.bite=as.numeric(as.character(L1$tick.bite))
+library(dplyr)
+Lc<-L1 %>%
+  group_by(county_state) %>%
+  summarize(population = mean(population[!is.na(population)]),
+            Cases = sum(Cases),
+            incidence = mean(incidence[!is.na(incidence)]),
+            garden = mean(garden[!is.na(garden)]),
+            mowing = mean(mowing[!is.na(mowing)]),
+            hunting = mean(hunting[!is.na(hunting)]),
+            tick = mean(tick[!is.na(tick)]),
+            deer.tick = mean(deer.tick[!is.na(deer.tick)]),
+            tick.bite = mean(tick.bite[!is.na(tick.bite)]),
+            tick.bites=mean(tick.bites[!is.na(tick.bites)]),
+            ticks = mean(ticks[!is.na(ticks)]), 
+            chipmunk = mean(chipmunk[!is.na(chipmunk)]),
+            mouse.trap = mean(mouse.trap[!is.na(mouse.trap)]),
+            mouse = mean(mouse[!is.na(mouse)]),
+            deer = mean(deer[!is.na(deer)]),
+            acorns = mean(acorns[!is.na(acorns)]),
+            repellent = mean(repellent[!is.na(repellent)]),
+            hiking = mean(hiking[!is.na(hiking)]),
+            deet = mean(deet[!is.na(deet)]),
+            state = state[1],
+            county_name = county_name[1],
+            state_county_fp = state_county_fp[1],
+            #county_fps = county_fps[1],
+            #statefp = statefp[1],
+            dma.ggl = dma.ggl[1]
+            )
+#summary(L1$incidence.dma)
+#L <- L1
+save(Lc, file = "Lc.Rdata")
+
+
+tmp = subset(Lc, county_name %in% "Dutchess County")
+```
+
+##### read in shapefile of counties and make map of incidence by county
+
+``` r
+load("Lc.Rdata")
+L = Lc
+#L$state_county_fp = paste(L$statefp, L$county_fps)
+#L$COUNTYFP = as.numeric(as.character(L$countyfp))
+C <- shapefile("/Users/fischhoff/app_wild/tick_searches/age_codes/cb_2017_us_county_500k.shp")
+C$COUNTYFP=as.numeric(as.character(C$COUNTYFP))
+head(C$STATEFP)
+```
+
+    ## [1] "01" "01" "01" "01" "01" "01"
+
+``` r
+C$STATEFP=as.numeric(as.character(C$STATEFP))
+C$state_county_fp = paste(C$STATEFP, C$COUNTYFP)
+outC <- append_data(C, L, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+```
+
+    ## Under coverage: 197 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+``` r
+test = under_coverage()
+check = subset(L, state_county_fp %in% test$value)
+check2 = subset(C, state_county_fp %in% test$value)
+unique(check$county_state)
+```
+
+    ## character(0)
+
+``` r
+#make map of dmas to make sure they look okay
+pal <- colorNumeric("viridis", NULL)
+#commenting this out because it does not display well in github_document
+M<- leaflet(outC) %>%
+  addTiles() %>%
+  setView(lat = 39.5, lng=-98.5, zoom =4) %>%
+    addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+    fillColor = ~pal(outC$incidence),
+    #label with county name 
+    label = ~paste0(county_name, ": ", formatC(outC$incidence, big.mark = ","))) %>%
+   addLegend(pal = pal, values = outC$incidence, opacity = 1.0,
+     labFormat = labelFormat(transform = function(x) round(10^x)))
+
+mapshot(M, file = "incidence.png")
+M
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-4-1.png)
+
+##### read in shapefile of counties and make map of incidence\_rescaled (from 0 to 1) by county -- to see if rescaling data makes patterns more apparent
+
+``` r
+load("Lc.Rdata")
+L = Lc
+#retitle column to make it more obvious how to link to shapefile
+#names(L)[names(L)=="state_countyfps"]="state_county_fp"
+#L$state_county_fp = paste(L$statefp, L$county_fps)
+C <- shapefile("/Users/fischhoff/app_wild/tick_searches/age_codes/cb_2017_us_county_500k.shp")
+C$COUNTYFP=as.numeric(as.character(C$COUNTYFP))
+head(C$STATEFP)
+```
+
+    ## [1] "01" "01" "01" "01" "01" "01"
+
+``` r
+C$STATEFP=as.numeric(as.character(C$STATEFP))
+C$state_county_fp = paste(C$STATEFP, C$COUNTYFP)
+outC <- append_data(C, L, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+```
+
+    ## Under coverage: 197 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+``` r
+outC = subset(outC, !is.na(incidence))
+outC$incidence_rescaled =rescale_mid(outC$incidence, to = c(0,1), mid=median(outC$incidence))
+test = under_coverage()
+check = subset(L, state_county_fp %in% test$value)
+check2 = subset(C, state_county_fp %in% test$value)
+unique(check$county_state)
+```
+
+    ## character(0)
+
+``` r
+#make map of dmas to make sure they look okay
+pal <- colorNumeric("viridis", NULL)
+#commenting this out because it does not display well in github_document
+inc_resc_map<- leaflet(outC) %>%
+  addTiles() %>%
+    setView(lat = 39.5, lng=-98.5, zoom =4) %>%
+  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+    fillColor = ~pal(outC$incidence_rescaled),
+    #label with county name 
+    label = ~paste0(county_name, ": ", formatC(outC$incidence_rescaled, big.mark = ","))) %>%
+   addLegend(pal = pal, values = outC$incidence_rescaled, opacity = 1.0,
+     labFormat = labelFormat(transform = function(x) round(10^x)))
+inc_resc_map
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-5-1.png)
+
+``` r
+#mapshot(N, file = "incidence_rescaled.png")
+```
+
+##### read in shapefile of counties and make map of tick.bite by county, together with outlines of counties by dma
+
+``` r
+load("Lc.Rdata")
+L = Lc
+#L$state_county_fp = paste(L$statefp, L$county_fps)
+#L$COUNTYFP = as.numeric(as.character(L$countyfp))
+C <- shapefile("/Users/fischhoff/app_wild/tick_searches/age_codes/cb_2017_us_county_500k.shp")
+C$COUNTYFP=as.numeric(as.character(C$COUNTYFP))
+head(C$STATEFP)
+```
+
+    ## [1] "01" "01" "01" "01" "01" "01"
+
+``` r
+C$STATEFP=as.numeric(as.character(C$STATEFP))
+C$state_county_fp = paste(C$STATEFP, C$COUNTYFP)
+outC <- append_data(C, L, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+```
+
+    ## Under coverage: 197 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+``` r
+outC = subset(outC, !is.na(tick.bite))
+outC = subset(outC, tick.bite!="NaN")
+
+outC$tick.bite_rescaled =rescale_mid(outC$tick.bite, to = c(0,1), mid=median(outC$tick.bite))
+test = under_coverage()
+check = subset(L, state_county_fp %in% test$value)
+check2 = subset(C, state_county_fp %in% test$value)
+unique(check$county_state)
+```
+
+    ## character(0)
+
+``` r
+#make map of dmas to make sure they look okay
+pal <- colorNumeric("Blues", NULL)
+pal_dma <- colorNumeric("YlOrRd", NULL)
+#commenting this out because it does not display well in github_document
+leaflet(outC) %>%
+  addTiles() %>%
+      setView(lat = 39.5, lng=-98.5, zoom =4) %>%
+
+    #add polygons for dma.ggl 
+  addPolygons(stroke = TRUE, smoothFactor=0.3, opacity = 1, weight = 1,
+              fill=FALSE,color = ~pal_dma(as.numeric(as.factor(outC$dma.ggl))))%>%
+
+  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+    fillColor = ~pal(outC$tick.bite_rescaled),
+    #label with county name
+    label = ~paste0(county_name, ": ", formatC(outC$tick.bite_rescaled, big.mark = ","))) %>%
+   addLegend(pal = pal, values = outC$tick.bite_rescaled, opacity = 0.5,
+     labFormat = labelFormat(transform = function(x) round(10^x)))
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-6-1.png)
+
+##### read in shapefile of counties and make map of hunting\_rescaled by dma, together with outlines of counties by dma
+
+``` r
+load("Lc.Rdata")
+L = Lc
+#L$state_county_fp = paste(L$statefp, L$county_fps)
+#L$COUNTYFP = as.numeric(as.character(L$countyfp))
+C <- shapefile("/Users/fischhoff/app_wild/tick_searches/age_codes/cb_2017_us_county_500k.shp")
+C$COUNTYFP=as.numeric(as.character(C$COUNTYFP))
+head(C$STATEFP)
+```
+
+    ## [1] "01" "01" "01" "01" "01" "01"
+
+``` r
+C$STATEFP=as.numeric(as.character(C$STATEFP))
+C$state_county_fp = paste(C$STATEFP, C$COUNTYFP)
+outC <- append_data(C, L, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+```
+
+    ## Under coverage: 197 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+``` r
+outC = subset(outC, !is.na(tick.bite))
+outC = subset(outC, tick.bite!="NaN")
+
+outC$hunting_rescaled =rescale_mid(outC$hunting, to = c(0,1), mid=median(outC$hunting))
+test = under_coverage()
+check = subset(L, state_county_fp %in% test$value)
+check2 = subset(C, state_county_fp %in% test$value)
+unique(check$county_state)
+```
+
+    ## character(0)
+
+``` r
+#make map of dmas to make sure they look okay
+pal <- colorNumeric("Blues", NULL)
+pal_dma <- colorNumeric("YlOrRd", NULL)
+#commenting this out because it does not display well in github_document
+leaflet(outC) %>%
+  addTiles() %>%
+      setView(lat = 39.5, lng=-98.5, zoom =4) %>%
+
+    #add polygons for dma.ggl 
+  addPolygons(stroke = TRUE, smoothFactor=0.3, opacity = 1, weight = 1,
+              fill=FALSE,color = ~pal_dma(as.numeric(as.factor(outC$dma.ggl))))%>%
+
+  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+    fillColor = ~pal(outC$hunting_rescaled),
+    #label with county name
+    label = ~paste0(county_name, ": ", formatC(outC$hunting_rescaled, big.mark = ","))) %>%
+   addLegend(pal = pal, values = outC$hunting_rescaled, opacity = 0.5,
+     labFormat = labelFormat(transform = function(x) round(10^x)))
+```
+
+![](tick_searches_files/figure-markdown_github/hunting-1.png)
+
+##### read in shapefile of counties and make map of hiking\_rescaled by dma, together with outlines of counties by dma
+
+``` r
+load("Lc.Rdata")
+L = Lc
+#L$state_county_fp = paste(L$statefp, L$county_fps)
+#L$COUNTYFP = as.numeric(as.character(L$countyfp))
+C <- shapefile("/Users/fischhoff/app_wild/tick_searches/age_codes/cb_2017_us_county_500k.shp")
+C$COUNTYFP=as.numeric(as.character(C$COUNTYFP))
+head(C$STATEFP)
+```
+
+    ## [1] "01" "01" "01" "01" "01" "01"
+
+``` r
+C$STATEFP=as.numeric(as.character(C$STATEFP))
+C$state_county_fp = paste(C$STATEFP, C$COUNTYFP)
+outC <- append_data(C, L, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+```
+
+    ## Under coverage: 197 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+``` r
+outC = subset(outC, !is.na(tick.bite))
+outC = subset(outC, tick.bite!="NaN")
+
+outC$hiking_rescaled =rescale_mid(outC$hiking, to = c(0,1), mid=median(outC$hiking))
+test = under_coverage()
+check = subset(L, state_county_fp %in% test$value)
+check2 = subset(C, state_county_fp %in% test$value)
+unique(check$county_state)
+```
+
+    ## character(0)
+
+``` r
+#make map of dmas to make sure they look okay
+pal <- colorNumeric("Blues", NULL)
+pal_dma <- colorNumeric("YlOrRd", NULL)
+#commenting this out because it does not display well in github_document
+leaflet(outC) %>%
+  addTiles() %>%
+      setView(lat = 39.5, lng=-98.5, zoom =4) %>%
+
+    #add polygons for dma.ggl 
+  addPolygons(stroke = TRUE, smoothFactor=0.3, opacity = 1, weight = 1,
+              fill=FALSE,color = ~pal_dma(as.numeric(as.factor(outC$dma.ggl))))%>%
+
+  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+    fillColor = ~pal(outC$hiking_rescaled),
+    #label with county name
+    label = ~paste0(county_name, ": ", formatC(outC$hiking_rescaled, big.mark = ","))) %>%
+   addLegend(pal = pal, values = outC$hiking_rescaled, opacity = 0.5,
+     labFormat = labelFormat(transform = function(x) round(10^x)))
+```
+
+![](tick_searches_files/figure-markdown_github/hiking-1.png)
+
+##### read in shapefile of counties and make map of deer\_rescaled by dma, together with outlines of counties by dma
+
+``` r
+load("Lc.Rdata")
+L = Lc
+#L$state_county_fp = paste(L$statefp, L$county_fps)
+#L$COUNTYFP = as.numeric(as.character(L$countyfp))
+C <- shapefile("/Users/fischhoff/app_wild/tick_searches/age_codes/cb_2017_us_county_500k.shp")
+C$COUNTYFP=as.numeric(as.character(C$COUNTYFP))
+head(C$STATEFP)
+```
+
+    ## [1] "01" "01" "01" "01" "01" "01"
+
+``` r
+C$STATEFP=as.numeric(as.character(C$STATEFP))
+C$state_county_fp = paste(C$STATEFP, C$COUNTYFP)
+outC <- append_data(C, L, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+```
+
+    ## Under coverage: 197 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+``` r
+outC = subset(outC, !is.na(tick.bite))
+outC = subset(outC, tick.bite!="NaN")
+
+outC$deer_rescaled =rescale_mid(outC$deer, to = c(0,1), mid=median(outC$deer))
+test = under_coverage()
+check = subset(L, state_county_fp %in% test$value)
+check2 = subset(C, state_county_fp %in% test$value)
+unique(check$county_state)
+```
+
+    ## character(0)
+
+``` r
+#make map of dmas to make sure they look okay
+pal <- colorNumeric("Blues", NULL)
+pal_dma <- colorNumeric("YlOrRd", NULL)
+#commenting this out because it does not display well in github_document
+leaflet(outC) %>%
+  addTiles() %>%
+      setView(lat = 39.5, lng=-98.5, zoom =4) %>%
+
+    #add polygons for dma.ggl 
+  addPolygons(stroke = TRUE, smoothFactor=0.3, opacity = 1, weight = 1,
+              fill=FALSE,color = ~pal_dma(as.numeric(as.factor(outC$dma.ggl))))%>%
+
+  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+    fillColor = ~pal(outC$deer_rescaled),
+    #label with county name
+    label = ~paste0(county_name, ": ", formatC(outC$deer_rescaled, big.mark = ","))) %>%
+   addLegend(pal = pal, values = outC$deer_rescaled, opacity = 0.5,
+     labFormat = labelFormat(transform = function(x) round(10^x)))
+```
+
+![](tick_searches_files/figure-markdown_github/deer-1.png)
+
+##### read in shapefile of counties and make map of mouse.trap\_rescaled by dma, together with outlines of counties by dma
+
+``` r
+load("Lc.Rdata")
+L = Lc
+#L$state_county_fp = paste(L$statefp, L$county_fps)
+#L$COUNTYFP = as.numeric(as.character(L$countyfp))
+C <- shapefile("/Users/fischhoff/app_wild/tick_searches/age_codes/cb_2017_us_county_500k.shp")
+C$COUNTYFP=as.numeric(as.character(C$COUNTYFP))
+head(C$STATEFP)
+```
+
+    ## [1] "01" "01" "01" "01" "01" "01"
+
+``` r
+C$STATEFP=as.numeric(as.character(C$STATEFP))
+C$state_county_fp = paste(C$STATEFP, C$COUNTYFP)
+outC <- append_data(C, L, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+```
+
+    ## Under coverage: 197 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+``` r
+outC = subset(outC, !is.na(tick.bite))
+outC = subset(outC, tick.bite!="NaN")
+
+outC$mouse.trap_rescaled =rescale_mid(outC$mouse.trap, to = c(0,1), mid=median(outC$mouse.trap, na.rm=TRUE))
+test = under_coverage()
+check = subset(L, state_county_fp %in% test$value)
+check2 = subset(C, state_county_fp %in% test$value)
+unique(check$county_state)
+```
+
+    ## character(0)
+
+``` r
+#make map of dmas to make sure they look okay
+pal <- colorNumeric("Blues", NULL)
+pal_dma <- colorNumeric("YlOrRd", NULL)
+#commenting this out because it does not display well in github_document
+leaflet(outC) %>%
+  addTiles() %>%
+      setView(lat = 39.5, lng=-98.5, zoom =4) %>%
+
+    #add polygons for dma.ggl 
+  addPolygons(stroke = TRUE, smoothFactor=0.3, opacity = 1, weight = 1,
+              fill=FALSE,color = ~pal_dma(as.numeric(as.factor(outC$dma.ggl))))%>%
+
+  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+    fillColor = ~pal(outC$mouse.trap_rescaled),
+    #label with county name
+    label = ~paste0(county_name, ": ", formatC(outC$mouse.trap_rescaled, big.mark = ","))) %>%
+   addLegend(pal = pal, values = outC$mouse.trap_rescaled, opacity = 0.5,
+     labFormat = labelFormat(transform = function(x) round(10^x)))
+```
+
+![](tick_searches_files/figure-markdown_github/mouse_trap-1.png)
+
+##### read in shapefile of counties and make map of deet\_rescaled by dma, together with outlines of counties by dma
+
+``` r
+load("Lc.Rdata")
+L = Lc
+#L$state_county_fp = paste(L$statefp, L$county_fps)
+#L$COUNTYFP = as.numeric(as.character(L$countyfp))
+C <- shapefile("/Users/fischhoff/app_wild/tick_searches/age_codes/cb_2017_us_county_500k.shp")
+C$COUNTYFP=as.numeric(as.character(C$COUNTYFP))
+head(C$STATEFP)
+```
+
+    ## [1] "01" "01" "01" "01" "01" "01"
+
+``` r
+C$STATEFP=as.numeric(as.character(C$STATEFP))
+C$state_county_fp = paste(C$STATEFP, C$COUNTYFP)
+outC <- append_data(C, L, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+```
+
+    ## Under coverage: 197 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+``` r
+outC = subset(outC, !is.na(tick.bite))
+outC = subset(outC, tick.bite!="NaN")
+
+outC$deet_rescaled =rescale_mid(outC$deet, to = c(0,1), mid=median(outC$deet, na.rm=TRUE))
+test = under_coverage()
+check = subset(L, state_county_fp %in% test$value)
+check2 = subset(C, state_county_fp %in% test$value)
+unique(check$county_state)
+```
+
+    ## character(0)
+
+``` r
+#make map of dmas to make sure they look okay
+pal <- colorNumeric("Blues", NULL)
+pal_dma <- colorNumeric("YlOrRd", NULL)
+#commenting this out because it does not display well in github_document
+leaflet(outC) %>%
+  addTiles() %>%
+      setView(lat = 39.5, lng=-98.5, zoom =4) %>%
+
+    #add polygons for dma.ggl 
+  addPolygons(stroke = TRUE, smoothFactor=0.3, opacity = 1, weight = 1,
+              fill=FALSE,color = ~pal_dma(as.numeric(as.factor(outC$dma.ggl))))%>%
+
+  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+    fillColor = ~pal(outC$deet_rescaled),
+    #label with county name
+    label = ~paste0(county_name, ": ", formatC(outC$deet_rescaled, big.mark = ","))) %>%
+   addLegend(pal = pal, values = outC$deet_rescaled, opacity = 0.5,
+     labFormat = labelFormat(transform = function(x) round(10^x)))
+```
+
+![](tick_searches_files/figure-markdown_github/deet-1.png)
+
+##### summarize by dma
+
+``` r
+load("L1.Rdata")
+L1$tick.bites = L1[,20]
+L = L1
 library(dplyr)
 L1<-L %>%
   group_by(dma.ggl, year) %>%
   summarize(pop.dma = sum(population),
             Cases.dma = sum(Cases),
             incidence.dma = 100000*Cases.dma/pop.dma,
+            garden = garden[1],
+            mowing = mowing[1],
+            hunting = hunting[1],
+            tick = tick[1],
             deer.tick = deer.tick[1],
             tick.bite = tick.bite[1],
             tick.bites=tick.bites[1],
             ticks = ticks[1], 
+            chipmunk = chipmunk[1],
+            mouse.trap = mouse.trap[1],
+            #mouse = mean(mouse[!is.na(mouse)]),
+            deer =deer[1],
+            acorns = acorns[1],
             repellent = repellent[1],
             hiking = hiking[1],
             deet = deet[1],
@@ -726,37 +1283,91 @@ summary(L1$incidence.dma)
 
 ``` r
 #L <- L1
-save(L1, file = "L1.Rdata")
+L2 = L1
+save(L2, file = "L2.Rdata")
+summary(L2)
 ```
 
-run boosted regression tree analysis -- analyze at dma-level
-============================================================
+    ##    dma.ggl               year         pop.dma           Cases.dma     
+    ##  Length:2379        Min.   :2004   Min.   :    1385   Min.   :   0.0  
+    ##  Class :character   1st Qu.:2007   1st Qu.:  323586   1st Qu.:   0.0  
+    ##  Mode  :character   Median :2010   Median :  794328   Median :   4.0  
+    ##                     Mean   :2010   Mean   : 1644339   Mean   : 162.3  
+    ##                     3rd Qu.:2013   3rd Qu.: 1903494   3rd Qu.:  20.0  
+    ##                     Max.   :2016   Max.   :21955677   Max.   :8238.0  
+    ##                                                                       
+    ##  incidence.dma          garden           mowing          hunting      
+    ##  Min.   :  0.0000   Min.   :  8.00   Min.   :  2.00   Min.   :  2.00  
+    ##  1st Qu.:  0.0000   1st Qu.: 30.00   1st Qu.: 15.00   1st Qu.: 15.00  
+    ##  Median :  0.4248   Median : 36.00   Median : 23.00   Median : 25.00  
+    ##  Mean   :  7.8521   Mean   : 36.61   Mean   : 27.06   Mean   : 29.49  
+    ##  3rd Qu.:  1.6906   3rd Qu.: 42.00   3rd Qu.: 36.00   3rd Qu.: 39.00  
+    ##  Max.   :268.9252   Max.   :100.00   Max.   :100.00   Max.   :100.00  
+    ##                     NA's   :2        NA's   :422      NA's   :3       
+    ##       tick          deer.tick        tick.bite        tick.bites    
+    ##  Min.   :  2.00   Min.   :  1.00   Min.   :  1.00   Min.   :  2.00  
+    ##  1st Qu.: 22.00   1st Qu.:  8.00   1st Qu.: 11.00   1st Qu.: 15.00  
+    ##  Median : 32.00   Median : 14.00   Median : 20.00   Median : 27.00  
+    ##  Mean   : 34.48   Mean   : 20.02   Mean   : 24.48   Mean   : 30.95  
+    ##  3rd Qu.: 44.00   3rd Qu.: 26.00   3rd Qu.: 33.00   3rd Qu.: 41.00  
+    ##  Max.   :100.00   Max.   :100.00   Max.   :100.00   Max.   :100.00  
+    ##  NA's   :84       NA's   :1110     NA's   :801      NA's   :1407    
+    ##      ticks           chipmunk        mouse.trap          deer       
+    ##  Min.   :  3.00   Min.   :  1.00   Min.   :  3.00   Min.   :  1.00  
+    ##  1st Qu.: 17.00   1st Qu.: 19.00   1st Qu.: 26.00   1st Qu.: 19.00  
+    ##  Median : 24.00   Median : 26.00   Median : 37.00   Median : 29.00  
+    ##  Mean   : 27.23   Mean   : 29.43   Mean   : 39.35   Mean   : 30.95  
+    ##  3rd Qu.: 34.00   3rd Qu.: 37.00   3rd Qu.: 49.00   3rd Qu.: 40.00  
+    ##  Max.   :100.00   Max.   :100.00   Max.   :100.00   Max.   :100.00  
+    ##  NA's   :183      NA's   :540      NA's   :1098     NA's   :370     
+    ##      acorns         repellent          hiking            deet       
+    ##  Min.   :  1.00   Min.   :  1.00   Min.   :  2.00   Min.   :  1.00  
+    ##  1st Qu.: 10.00   1st Qu.: 16.00   1st Qu.: 16.00   1st Qu.: 13.00  
+    ##  Median : 18.00   Median : 31.00   Median : 23.00   Median : 22.00  
+    ##  Mean   : 22.93   Mean   : 32.46   Mean   : 27.83   Mean   : 26.55  
+    ##  3rd Qu.: 30.00   3rd Qu.: 45.00   3rd Qu.: 34.00   3rd Qu.: 35.00  
+    ##  Max.   :100.00   Max.   :100.00   Max.   :100.00   Max.   :100.00  
+    ##  NA's   :1014     NA's   :269      NA's   :65       NA's   :864     
+    ##     state          
+    ##  Length:2379       
+    ##  Class :character  
+    ##  Mode  :character  
+    ##                    
+    ##                    
+    ##                    
+    ## 
+
+##### predict cases, predictors include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 10000, lr 0.001
 
 ``` r
 set.seed(1234)
 
-load("L1.Rdata")
-
+load("L2.Rdata")
+L2$tick.bites = as.numeric(L2$tick.bites)
+L2$hiking = as.numeric(L2$hiking)
+L2$Cases.dma=as.numeric(L2$Cases.dma)
 #library(dismo)
-L = L1
-L$deer.tick = as.numeric(as.character(L$deer.tick))
+L = L2
+L = subset(L,!is.na(hiking))
+#L$deer.tick = as.numeric(as.character(L$deer.tick))
 L$dma.ggl = factor(L$dma.ggl)
 L = data.frame(L)#have to change back from tibble to data.frame!!
 L$state = factor(L$state)
-keep.col = c("incidence.dma", "deer.tick", "tick.bite", "ticks", "tick.bites", "hiking", "deet", "repellent")
 
 
-DP =createDataPartition(L1$Cases.dma, p = 0.8)
+DP =createDataPartition(L$Cases.dma, p = 0.8)
 Train = L[DP$Resample1,]
 Test = L[-DP$Resample1,]
 save(Test, file = "Test.Rdata")
 
-ntrees = 3000
+ntrees = 10000
 gbm.dma = gbm(data=Train,
-                            Cases.dma ~deer.tick + tick.bite+ ticks+ tick.bites+pop.dma,
-                            distribution = "poisson",#default
+                            Cases.dma ~pop.dma+garden +mowing +hunting+tick+deer.tick +tick.bite+tick.bites+ticks+chipmunk+mouse.trap+deer+acorns+repellent+hiking+deet
+,
+                            distribution = "poisson",
                             n.trees = ntrees,#fit up to two-way interactions
-                            shrinkage = 0.01,
+                            shrinkage = 0.001,
+                            cv.folds = 0,#getting subscript out of bounds with cv.folds>0
                             interaction.depth = 4,
                             bag.fraction = 0.5)#default 
 
@@ -765,7 +1376,7 @@ print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
 ```
 
-    ## [1] 0.9603334
+    ## [1] 0.9219977
 
 ``` r
 #check names of columns used as predictors: 
@@ -773,7 +1384,7 @@ save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
 ``` r
 #write results to csv
@@ -786,18 +1397,29 @@ ntrees = gbm.dma$n.trees
 print(ntrees)#made 
 ```
 
-    ## [1] 3000
+    ## [1] 10000
 
 ``` r
 print(x.df)
 ```
 
-    ##     variable relative.influence
-    ## 1    pop.dma             56.888
-    ## 2 tick.bites             20.768
-    ## 3  deer.tick             14.352
-    ## 4  tick.bite              6.531
-    ## 5      ticks              1.461
+    ##      variable relative.influence
+    ## 1     pop.dma             57.177
+    ## 2   deer.tick             18.811
+    ## 3  tick.bites             10.268
+    ## 4        tick              5.837
+    ## 5   tick.bite              3.046
+    ## 6    chipmunk              0.858
+    ## 7      garden              0.728
+    ## 8     hunting              0.608
+    ## 9        deer              0.520
+    ## 10 mouse.trap              0.447
+    ## 11      ticks              0.370
+    ## 12     acorns              0.351
+    ## 13     hiking              0.342
+    ## 14     mowing              0.245
+    ## 15       deet              0.232
+    ## 16  repellent              0.159
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -808,15 +1430,513 @@ search = rep("Google.search", dim(x.df)[1])
 search[x.df$variable == "population"]="population"
 x.df$search = factor(search) 
 ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
 #  plot.tmp = ggplot()+
 
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-8-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
 ```
 
     ## Saving 7 x 5 in image
+
+``` r
+save(gbm.dma, file="gbm.dma.cases.pop.t10000.lr001.Rdata")
+```
+
+##### plot deviance curve -- not clear whether it has leveled off or not
+
+``` r
+library(ggplot2)
+df = data.frame(deviance = gbm.dma$train.error, trees = seq(from = 1, to = length(gbm.dma$train.error)))
+p <- ggplot(data = df, aes(x=trees, y = deviance))+
+  geom_line()
+p
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-9-1.png)
+
+##### predict cases, predictors include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
+
+``` r
+set.seed(1234)
+
+load("L2.Rdata")
+
+#library(dismo)
+L = L2
+L$deer.tick = as.numeric(as.character(L$deer.tick))
+L$dma.ggl = factor(L$dma.ggl)
+L = data.frame(L)#have to change back from tibble to data.frame!!
+L$state = factor(L$state)
+
+DP =createDataPartition(L$Cases.dma, p = 0.8)
+Train = L[DP$Resample1,]
+Test = L[-DP$Resample1,]
+save(Test, file = "Test.Rdata")
+
+ntrees = 50000
+gbm.dma = gbm(data=Train,
+                            Cases.dma ~pop.dma+garden +mowing +hunting+tick+deer.tick +tick.bite+tick.bites+ticks+chipmunk+mouse.trap+deer+acorns+repellent+hiking+deet,
+                            distribution = "poisson",#default
+                            n.trees = ntrees,#fit up to two-way interactions
+                            shrinkage = 0.001,
+                            interaction.depth = 4,
+                            bag.fraction = 0.5)#default 
+
+print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
+```
+
+    ## [1] 0.9939383
+
+``` r
+#check names of columns used as predictors: 
+save(gbm.dma, file = "gbm.dma.Rdata")
+x = summary(gbm.dma)
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-10-1.png)
+
+``` r
+#write results to csv
+x.df= data.frame(variable = x$var, 
+                 relative.influence = x$rel.inf)
+x.df$relative.influence = round(x.df$relative.influence, digits = 3)
+write.csv(x.df, file = "relative.influence.csv")
+#check number of trees
+ntrees = gbm.dma$n.trees
+print(ntrees)#made 
+```
+
+    ## [1] 50000
+
+``` r
+print(x.df)
+```
+
+    ##      variable relative.influence
+    ## 1     pop.dma             58.876
+    ## 2   deer.tick             19.844
+    ## 3  tick.bites              6.960
+    ## 4   tick.bite              4.538
+    ## 5        tick              3.472
+    ## 6    chipmunk              0.835
+    ## 7  mouse.trap              0.809
+    ## 8        deer              0.793
+    ## 9      garden              0.673
+    ## 10      ticks              0.622
+    ## 11    hunting              0.588
+    ## 12     hiking              0.580
+    ## 13       deet              0.468
+    ## 14     acorns              0.412
+    ## 15     mowing              0.296
+    ## 16  repellent              0.234
+
+``` r
+ind = which(x.df$variable == "pop.dma")
+variable = as.character(x.df$variable)
+variable[ind]=as.character("population")
+x.df$variable = variable
+search = rep("Google.search", dim(x.df)[1])
+search[x.df$variable == "population"]="population"
+
+#order variables by relative influence 
+x.df$variable = factor(x.df$variable, levels = 
+x.df$variable[order(x.df$relative.influence)])
+ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+#  plot.tmp = ggplot()+
+
+  geom_bar(stat="identity")
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-10-2.png)
+
+``` r
+ggsave("Figure.search.jpg")
+```
+
+    ## Saving 7 x 5 in image
+
+``` r
+save(gbm.dma, file="gbm.dma.cases.pop.t10000.lr001.Rdata")
+```
+
+##### plot deviance curve -- appears to have leveled off with 50000 trees, lr. 0.001
+
+``` r
+library(ggplot2)
+df = data.frame(deviance = gbm.dma$train.error, trees = seq(from = 1, to = length(gbm.dma$train.error)))
+p <- ggplot(data = df, aes(x=trees, y = deviance))+
+  geom_line()
+p
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-11-1.png)
+
+####### predict cases, predictors DO NOT include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
+
+``` r
+set.seed(1234)
+
+load("L2.Rdata")
+
+#library(dismo)
+L = L2
+L$deer.tick = as.numeric(as.character(L$deer.tick))
+L$dma.ggl = factor(L$dma.ggl)
+L = data.frame(L)#have to change back from tibble to data.frame!!
+L$state = factor(L$state)
+
+DP =createDataPartition(L$Cases.dma, p = 0.8)
+Train = L[DP$Resample1,]
+Test = L[-DP$Resample1,]
+save(Test, file = "Test.Rdata")
+
+ntrees = 50000
+gbm.dma = gbm(data=Train,
+                            Cases.dma ~garden +mowing +hunting+tick+deer.tick +tick.bite+tick.bites+ticks+chipmunk+mouse.trap+deer+acorns+repellent+hiking+deet,
+                            distribution = "poisson",#default
+                            n.trees = ntrees,#fit up to two-way interactions
+                            shrinkage = 0.001,
+                            interaction.depth = 4,
+                            bag.fraction = 0.5)#default 
+
+print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
+```
+
+    ## [1] 0.9880221
+
+``` r
+#check names of columns used as predictors: 
+save(gbm.dma, file = "gbm.dma.Rdata")
+x = summary(gbm.dma)
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-12-1.png)
+
+``` r
+#write results to csv
+x.df= data.frame(variable = x$var, 
+                 relative.influence = x$rel.inf)
+x.df$relative.influence = round(x.df$relative.influence, digits = 3)
+write.csv(x.df, file = "relative.influence.csv")
+#check number of trees
+ntrees = gbm.dma$n.trees
+print(ntrees)#made 
+```
+
+    ## [1] 50000
+
+``` r
+print(x.df)
+```
+
+    ##      variable relative.influence
+    ## 1   deer.tick             22.402
+    ## 2      garden             16.370
+    ## 3     hunting             16.052
+    ## 4  tick.bites              9.901
+    ## 5        deer              6.821
+    ## 6      mowing              6.303
+    ## 7        deet              4.169
+    ## 8   tick.bite              4.111
+    ## 9      acorns              2.879
+    ## 10 mouse.trap              2.465
+    ## 11     hiking              2.367
+    ## 12       tick              2.000
+    ## 13      ticks              1.748
+    ## 14  repellent              1.225
+    ## 15   chipmunk              1.185
+
+``` r
+ind = which(x.df$variable == "pop.dma")
+variable = as.character(x.df$variable)
+variable[ind]=as.character("population")
+x.df$variable = variable
+search = rep("Google.search", dim(x.df)[1])
+search[x.df$variable == "population"]="population"
+
+#order variables by relative influence 
+x.df$variable = factor(x.df$variable, levels = 
+x.df$variable[order(x.df$relative.influence)])
+ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+#  plot.tmp = ggplot()+
+
+  geom_bar(stat="identity")
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-12-2.png)
+
+``` r
+ggsave("Figure.search.jpg")
+```
+
+    ## Saving 7 x 5 in image
+
+``` r
+save(gbm.dma, file="gbm.dma.cases.t10000.lr001.Rdata")
+```
+
+##### plot deviance curve with 50000 trees, lr. 0.001, population not included as predictor of cases
+
+``` r
+library(ggplot2)
+df = data.frame(deviance = gbm.dma$train.error, trees = seq(from = 1, to = length(gbm.dma$train.error)))
+p <- ggplot(data = df, aes(x=trees, y = deviance))+
+  geom_line()
+p
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-13-1.png)
+
+##### predict incidence, predictors include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
+
+``` r
+set.seed(1234)
+
+load("L2.Rdata")
+
+#library(dismo)
+L = L2
+L$deer.tick = as.numeric(as.character(L$deer.tick))
+L$dma.ggl = factor(L$dma.ggl)
+L = data.frame(L)#have to change back from tibble to data.frame!!
+L$state = factor(L$state)
+# keep.col = c("incidence.dma", "deer.tick", "tick.bite", "ticks", "tick.bites", "hiking", "deet", "repellent")
+
+
+DP =createDataPartition(L$incidence.dma, p = 0.8)
+Train = L[DP$Resample1,]
+Test = L[-DP$Resample1,]
+save(Test, file = "Test.Rdata")
+
+ntrees = 50000
+gbm.dma = gbm(data=Train,
+                            incidence.dma ~pop.dma+ garden +mowing +hunting+tick+deer.tick +tick.bite+tick.bites+ticks+chipmunk+mouse.trap+deer+acorns+repellent+hiking+deet,
+                            distribution = "gaussian",#default
+                            n.trees = ntrees,#fit up to two-way interactions
+                            shrinkage = 0.001,
+                            interaction.depth = 4,
+                            bag.fraction = 0.5)#default 
+
+print(1-sum((Train$incidence.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Train$incidence.dma - mean(Train$incidence.dma))^2))
+```
+
+    ## [1] 0.9499953
+
+``` r
+#check names of columns used as predictors: 
+save(gbm.dma, file = "gbm.dma.Rdata")
+x = summary(gbm.dma)
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-14-1.png)
+
+``` r
+#write results to csv
+x.df= data.frame(variable = x$var, 
+                 relative.influence = x$rel.inf)
+x.df$relative.influence = round(x.df$relative.influence, digits = 3)
+write.csv(x.df, file = "relative.influence.csv")
+#check number of trees
+ntrees = gbm.dma$n.trees
+print(ntrees)#made 
+```
+
+    ## [1] 50000
+
+``` r
+print(x.df)
+```
+
+    ##      variable relative.influence
+    ## 1   deer.tick             28.676
+    ## 2     pop.dma             12.254
+    ## 3        tick             11.440
+    ## 4        deer              6.742
+    ## 5   repellent              6.131
+    ## 6   tick.bite              5.551
+    ## 7  mouse.trap              4.980
+    ## 8      mowing              4.665
+    ## 9       ticks              3.917
+    ## 10    hunting              2.758
+    ## 11       deet              2.597
+    ## 12 tick.bites              2.592
+    ## 13     acorns              2.563
+    ## 14     hiking              2.070
+    ## 15   chipmunk              2.044
+    ## 16     garden              1.019
+
+``` r
+ind = which(x.df$variable == "pop.dma")
+variable = as.character(x.df$variable)
+variable[ind]=as.character("population")
+x.df$variable = variable
+search = rep("Google.search", dim(x.df)[1])
+search[x.df$variable == "population"]="population"
+
+#order variables by relative influence 
+x.df$variable = factor(x.df$variable, levels = 
+x.df$variable[order(x.df$relative.influence)])
+ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+#  plot.tmp = ggplot()+
+
+  geom_bar(stat="identity")
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-14-2.png)
+
+``` r
+ggsave("Figure.search.jpg")
+```
+
+    ## Saving 7 x 5 in image
+
+``` r
+#save(gbm.dma, file="gbm.dma.cases.pop.t10000.lr001.Rdata")
+```
+
+##### plot deviance curve -- appears to have leveled off with 50000 trees, lr. 0.001
+
+``` r
+library(ggplot2)
+df = data.frame(deviance = gbm.dma$train.error, trees = seq(from = 1, to = length(gbm.dma$train.error)))
+p <- ggplot(data = df, aes(x=trees, y = deviance))+
+  geom_line()
+p
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-1.png)
+
+##### predict incidence, predictors do not include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
+
+``` r
+set.seed(1234)
+
+load("L2.Rdata")
+
+#library(dismo)
+L = L2
+L$deer.tick = as.numeric(as.character(L$deer.tick))
+L$dma.ggl = factor(L$dma.ggl)
+L = data.frame(L)#have to change back from tibble to data.frame!!
+L$state = factor(L$state)
+
+DP =createDataPartition(L$incidence.dma, p = 0.8)
+Train = L[DP$Resample1,]
+Test = L[-DP$Resample1,]
+save(Test, file = "Test.Rdata")
+
+ntrees = 50000
+gbm.dma = gbm(data=Train,
+                            incidence.dma ~garden +mowing +hunting+tick+deer.tick +tick.bite+tick.bites+ticks+chipmunk+mouse.trap+deer+acorns+repellent+hiking+deet,
+ 
+                            distribution = "gaussian",#default
+                            n.trees = ntrees,#fit up to two-way interactions
+                            shrinkage = 0.001,
+                            interaction.depth = 4,
+                            bag.fraction = 0.5)#default 
+
+print(1-sum((Train$incidence.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Train$incidence.dma - mean(Train$incidence.dma))^2))
+```
+
+    ## [1] 0.9277821
+
+``` r
+#check names of columns used as predictors: 
+save(gbm.dma, file = "gbm.dma.Rdata")
+x = summary(gbm.dma)
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-16-1.png)
+
+``` r
+#write results to csv
+x.df= data.frame(variable = x$var, 
+                 relative.influence = x$rel.inf)
+x.df$relative.influence = round(x.df$relative.influence, digits = 3)
+write.csv(x.df, file = "relative.influence.csv")
+#check number of trees
+ntrees = gbm.dma$n.trees
+print(ntrees)#made 
+```
+
+    ## [1] 50000
+
+``` r
+print(x.df)
+```
+
+    ##      variable relative.influence
+    ## 1   deer.tick             27.218
+    ## 2        tick             10.673
+    ## 3   repellent             10.157
+    ## 4        deer              8.130
+    ## 5      mowing              7.143
+    ## 6  mouse.trap              6.744
+    ## 7   tick.bite              6.353
+    ## 8       ticks              4.848
+    ## 9      acorns              3.348
+    ## 10       deet              3.235
+    ## 11 tick.bites              2.960
+    ## 12    hunting              2.864
+    ## 13   chipmunk              2.631
+    ## 14     hiking              2.570
+    ## 15     garden              1.125
+
+``` r
+ind = which(x.df$variable == "pop.dma")
+variable = as.character(x.df$variable)
+variable[ind]=as.character("population")
+x.df$variable = variable
+search = rep("Google.search", dim(x.df)[1])
+search[x.df$variable == "population"]="population"
+
+#order variables by relative influence 
+x.df$variable = factor(x.df$variable, levels = 
+x.df$variable[order(x.df$relative.influence)])
+ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+#  plot.tmp = ggplot()+
+
+  geom_bar(stat="identity")
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-16-2.png)
+
+``` r
+ggsave("Figure.search.jpg")
+```
+
+    ## Saving 7 x 5 in image
+
+``` r
+#save(gbm.dma, file="gbm.dma.cases.pop.t10000.lr001.Rdata")
+```
+
+##### plot deviance curve -- with 50000 trees, lr. 0.001
+
+``` r
+library(ggplot2)
+df = data.frame(deviance = gbm.dma$train.error, trees = seq(from = 1, to = length(gbm.dma$train.error)))
+p <- ggplot(data = df, aes(x=trees, y = deviance))+
+  geom_line()
+p
+```
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-17-1.png)
