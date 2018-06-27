@@ -5,7 +5,6 @@ date: "5/13/2018"
 output: github_document
 always_allow_html: yes
 ---
-#To do: line 897, run gbm with all variables
 
 ####Objective: Predict Lyme disease risk at temporal and spatial scales useful for decision-makers (public health agencies, healthcare providers, members of the public).  
 
@@ -13,7 +12,7 @@ always_allow_html: yes
 
 ####Lyme disease risk arises from two interacting causes: first, the abundance of infected host-seeking blacklegged ticks; and second, human behavior that brings us into proximity of ticks. The abundance of infected ticks seeking hosts, also referred to as entomological risk, is influenced by the wildlife host community in a particular place, landscape characteristics (e.g., forest cover, geographic location), and weather. We are exposed to ticks through our work and recreation. Our risk further depends on the extent to which we apply tick-bite prevention methods. 
 
-####Internet search data offer a source of real-time information on people's encounters with ticks. If we know people in our area are searching more for ticks, this could be a sign that tick activity is high and we need to be more vigilant against ticks. To evaluate whether internet search data provides a useful measure of disease risk, here we use Google trends data from 2004 to 2016 to predict Lyme disease incidence in those years. 
+####Internet search data offer a source of real-time information on people's encounters with ticks. If we know people in our area are searching more for ticks, this could be a sign that tick activity is high and we need to be more vigilant against ticks. Volume of searches related to ecological factors that affect risk (e.g. "chipmunk") or activities that expose people to ticks (e.g., "hiking) or that reduce risk (e.g. "repellent), may also be useful in predicting risk. To evaluate whether internet search data provides a useful measure of disease risk, here we use Google trends data from 2004 to 2016 to predict Lyme disease incidence in those years.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -74,7 +73,7 @@ write.csv(dma.df, file = "dma.csv")
 ```
 
 #get google trends data
-#####Note: additional terms may be useful for predicting Lyme disease (e.g., outdoor activities, symptoms, "Lyme disease", wildlife host community). But for this analysis the focus is on terms that reflect encounters with ticks. We used the term "tick bite", and the top 10 related queries for that term. We excluded queries related to tick species other than the blacklegged tick (Ixodes scapularis), and related to tick encounters with pets. We also excluded queries such as "what does tick bite look like", that contain within it other search terms already included (in this case, "tick bite").  
+#####We used the term "tick bite", and the top 10 related queries for that term. We excluded queries related to tick species other than the blacklegged tick (Ixodes scapularis), and related to tick encounters with pets. We also excluded queries such as "what does tick bite look like", that contain within it other search terms already included (in this case, "tick bite"). We also included several search terms related to ecological factors (e.g. "deer") and behavioral factors (e.g. "repellent") that may mediate risk. Google Trends values are from 0 to 100. Values reflect the popularity of a search term, relative to the popularity of other search terms within a geographical area. 
 ```{r}
 
 #make function for substring
@@ -123,13 +122,20 @@ terms_current_df_field = c("garden", "mowing","tick", "hiking", "hunting", "deet
 lag_seq = c(rep(0,10) ,1,1,2,2,1)
 
 #test set, commenting out for now
-# terms = c("garden",  "chipmunk", "deer")
-# terms_current_df_field = c("garden", "chipmunk", "deer")
-# lag_seq = c(0,1,2)
+# terms = c("deet")
+# terms_current_df_field = c("deet")
+# lag_seq = c(0)
 
 out = NULL
 a = 1
 b =1
+
+#confirm that values of NA are likely 0
+#     tmp <- gtrends(keyword = "deet", geo = c("US"), time = paste(year_subset$start.days, year_subset$end.days, sep = " "), category = 0, hl = "en-US",
+#     low_search_volume = TRUE)
+# tmp$interest_by_dma$hits
+# tmp$interest_by_dma$location
+    
 for (a in 1:length(years)){
 #for (a in c(1:2)){#test set
   print(a)
@@ -145,6 +151,7 @@ for (a in 1:length(years)){
 
     gt$tick.bite = gt$hits
     gt$tick.bite[gt$tick.bite == "<1"]=  1#replace any "<1"
+    gt$tick.bite[is.na(gt$tick.bite)]=  0#replace any NA with 0
     gt$tick.bite = as.numeric(as.character(gt$tick.bite))
     gt = gt[,c("location","tick.bite", "state", "year")]
 
@@ -163,6 +170,7 @@ for (a in 1:length(years)){
         gt.tmp = gt.tmp$interest_by_dma
         gt.tmp = gt.tmp[order(gt.tmp$location),]
         gt.tmp$hits[gt.tmp$hits=="<1"]= 1#replace any "<1"
+        gt.tmp$hits[is.na(gt.tmp$hits)]=  0#replace any NA with 0
         gt.tmp$hits = as.numeric(as.character(gt.tmp$hits))
         gt.tmp[,c(terms_current_df_field[b])]= gt.tmp$hits
         gt.tmp = gt.tmp[,c("location",terms_current_df_field[b], "state", "year")]
@@ -471,6 +479,9 @@ dim(Lc)#none are lost
 
 #assign google trends to L
 names(gt)[names(gt)=="location"]="dma.ggl"
+
+# gt = gt[,c("dma.ggl", "deet", "year")]
+
 gt = gt[,c("dma.ggl", "tick.bite"      , "year"      , "garden"    , "mowing"    , "tick",       "hiking", "hunting"  ,"deet"       ,"repellent",  "deer.tick" , "tick bites", "ticks"   ,   "chipmunk",   "mouse.trap", "deer","acorns", "mouse")]
 L1 = merge(Lc, gt, by = c("dma.ggl", "year"))
 
@@ -522,7 +533,6 @@ save(Lc, file = "Lc.Rdata")
 
 tmp = subset(Lc, county_name %in% "Dutchess County")
 ```
-
 
 #####read in shapefile of counties and make map of incidence by county
 ```{r}
@@ -860,6 +870,41 @@ leaflet(outC) %>%
 
 ```
 
+#####summarize by dma -- test with one variable
+```{r}
+load("L1.Rdata")
+#L1$tick.bites = L1[,20]
+L = L1
+library(dplyr)
+L1<-L %>%
+  group_by(dma.ggl, year) %>%
+  summarize(pop.dma = sum(population),
+            Cases.dma = sum(Cases),
+            incidence.dma = 100000*Cases.dma/pop.dma,
+            # garden = garden[1],
+            # mowing = mowing[1],
+            # hunting = hunting[1],
+            # tick = tick[1],
+            # deer.tick = deer.tick[1],
+            # tick.bite = tick.bite[1],
+            # tick.bites=tick.bites[1],
+            # ticks = ticks[1], 
+            # chipmunk = chipmunk[1],
+            # mouse.trap = mouse.trap[1],
+            #mouse = mean(mouse[!is.na(mouse)]),
+            # deer =deer[1],
+            # acorns = acorns[1],
+            # repellent = repellent[1],
+            # hiking = hiking[1],
+            deet = deet[1],
+            state = state[1])
+summary(L1$incidence.dma)
+#L <- L1
+L2 = L1
+save(L2, file = "L2.Rdata")
+summary(L2)
+```
+
 
 #####summarize by dma
 ```{r}
@@ -898,6 +943,76 @@ summary(L2)
 
 
 #####predict cases, predictors include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 10000, lr 0.001
+#####testing whether folds works with no zeros
+```{r}
+# set.seed(1234)
+# 
+# load("L2.Rdata")
+# # L2$tick.bites = as.numeric(L2$tick.bites)
+# # L2$hiking = as.numeric(L2$hiking)
+# L2$Cases.dma=as.numeric(L2$Cases.dma)
+# #library(dismo)
+# L = L2
+# # L = subset(L,!is.na(hiking))
+# #L$deer.tick = as.numeric(as.character(L$deer.tick))
+# L$dma.ggl = factor(L$dma.ggl)
+# L = data.frame(L)#have to change back from tibble to data.frame!!
+# L$state = factor(L$state)
+# L = L[,c("Cases.dma", "pop.dma","garden","mowing","hunting","tick","deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet")]
+# 
+# 
+# DP =createDataPartition(L$Cases.dma, p = 0.8)
+# Train = L[DP$Resample1,]
+# Test = L[-DP$Resample1,]
+# save(Test, file = "Test.Rdata")
+# 
+# ntrees = 10000
+# Train = Train[,c("dma.ggl", "year", "pop.dma", "Cases.dma", "deet")]
+# gbm.dma = gbm(data=Train,
+#                             Cases.dma ~pop.dma+deet,
+#                             distribution = "poisson",
+#                             n.trees = ntrees,#fit up to two-way interactions
+#                             shrinkage = 0.001,
+#                             cv.folds = 2,#getting subscript out of bounds with cv.folds>0
+#                             interaction.depth = 2,
+#                             bag.fraction = 0.5)#default 
+# 
+# print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
+#                                          type="response"))^2)/
+#         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
+# 
+# #check names of columns used as predictors: 
+# save(gbm.dma, file = "gbm.dma.Rdata")
+# x = summary(gbm.dma)
+# 
+# #write results to csv
+# x.df= data.frame(variable = x$var, 
+#                  relative.influence = x$rel.inf)
+# x.df$relative.influence = round(x.df$relative.influence, digits = 3)
+# write.csv(x.df, file = "relative.influence.csv")
+# #check number of trees
+# ntrees = gbm.dma$n.trees
+# print(ntrees)#made 
+# print(x.df)
+# ind = which(x.df$variable == "pop.dma")
+# variable = as.character(x.df$variable)
+# variable[ind]=as.character("population")
+# x.df$variable = variable
+# search = rep("Google.search", dim(x.df)[1])
+# search[x.df$variable == "population"]="population"
+# x.df$search = factor(search) 
+# ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+# #  plot.tmp = ggplot()+
+# 
+#   geom_bar(stat="identity")
+# ggsave("Figure.search.jpg")
+# save(gbm.dma, file="gbm.dma.cases.pop.t10000.lr001.Rdata")
+
+```
+
+
+#####predict cases, predictors include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 10000, lr 0.001
 ```{r}
 set.seed(1234)
 
@@ -912,7 +1027,7 @@ L = subset(L,!is.na(hiking))
 L$dma.ggl = factor(L$dma.ggl)
 L = data.frame(L)#have to change back from tibble to data.frame!!
 L$state = factor(L$state)
-
+L = L[,c("Cases.dma", "pop.dma","garden","mowing","hunting","tick","deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet")]
 
 DP =createDataPartition(L$Cases.dma, p = 0.8)
 Train = L[DP$Resample1,]
@@ -926,13 +1041,17 @@ gbm.dma = gbm(data=Train,
                             distribution = "poisson",
                             n.trees = ntrees,#fit up to two-way interactions
                             shrinkage = 0.001,
-                            cv.folds = 0,#getting subscript out of bounds with cv.folds>0
+                            cv.folds = 5,#getting subscript out of bounds with cv.folds>0
                             interaction.depth = 4,
                             bag.fraction = 0.5)#default 
 
 print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
                                          type="response"))^2)/
         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
+
+print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
 
 #check names of columns used as predictors: 
 save(gbm.dma, file = "gbm.dma.Rdata")
@@ -987,6 +1106,8 @@ L$dma.ggl = factor(L$dma.ggl)
 L = data.frame(L)#have to change back from tibble to data.frame!!
 L$state = factor(L$state)
 
+L = L[,c("Cases.dma", "pop.dma","garden","mowing","hunting","tick","deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet")]
+
 DP =createDataPartition(L$Cases.dma, p = 0.8)
 Train = L[DP$Resample1,]
 Test = L[-DP$Resample1,]
@@ -998,12 +1119,17 @@ gbm.dma = gbm(data=Train,
                             distribution = "poisson",#default
                             n.trees = ntrees,#fit up to two-way interactions
                             shrinkage = 0.001,
+                            cv.folds = 5,#getting subscript out of bounds with cv.folds>0
                             interaction.depth = 4,
                             bag.fraction = 0.5)#default 
 
 print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
                                          type="response"))^2)/
         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
+
+print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
 
 #check names of columns used as predictors: 
 save(gbm.dma, file = "gbm.dma.Rdata")
@@ -1060,6 +1186,8 @@ L$deer.tick = as.numeric(as.character(L$deer.tick))
 L$dma.ggl = factor(L$dma.ggl)
 L = data.frame(L)#have to change back from tibble to data.frame!!
 L$state = factor(L$state)
+L = L[,c("Cases.dma", "pop.dma","garden","mowing","hunting","tick","deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet")]
+
 
 DP =createDataPartition(L$Cases.dma, p = 0.8)
 Train = L[DP$Resample1,]
@@ -1072,12 +1200,17 @@ gbm.dma = gbm(data=Train,
                             distribution = "poisson",#default
                             n.trees = ntrees,#fit up to two-way interactions
                             shrinkage = 0.001,
+                            cv.folds = 5,#getting subscript out of bounds with cv.folds>0
                             interaction.depth = 4,
                             bag.fraction = 0.5)#default 
 
 print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
                                          type="response"))^2)/
         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
+
+print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
 
 #check names of columns used as predictors: 
 save(gbm.dma, file = "gbm.dma.Rdata")
@@ -1096,13 +1229,13 @@ ind = which(x.df$variable == "pop.dma")
 variable = as.character(x.df$variable)
 variable[ind]=as.character("population")
 x.df$variable = variable
-search = rep("Google.search", dim(x.df)[1])
-search[x.df$variable == "population"]="population"
+# search = rep("Google.search", dim(x.df)[1])
+# search[x.df$variable == "population"]="population"
 
 #order variables by relative influence 
 x.df$variable = factor(x.df$variable, levels = 
 x.df$variable[order(x.df$relative.influence)])
-ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+ggplot(data = x.df, aes(x =variable, y = relative.influence))+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
 #  plot.tmp = ggplot()+
 
@@ -1135,7 +1268,7 @@ L$dma.ggl = factor(L$dma.ggl)
 L = data.frame(L)#have to change back from tibble to data.frame!!
 L$state = factor(L$state)
 # keep.col = c("incidence.dma", "deer.tick", "tick.bite", "ticks", "tick.bites", "hiking", "deet", "repellent")
-
+L = L[,c("incidence.dma", "pop.dma","garden","mowing","hunting","tick","deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet")]
 
 DP =createDataPartition(L$incidence.dma, p = 0.8)
 Train = L[DP$Resample1,]
@@ -1149,11 +1282,18 @@ gbm.dma = gbm(data=Train,
                             n.trees = ntrees,#fit up to two-way interactions
                             shrinkage = 0.001,
                             interaction.depth = 4,
+                            cv.folds = 5,#getting subscript out of bounds with cv.folds>0
+
                             bag.fraction = 0.5)#default 
 
 print(1-sum((Train$incidence.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
                                          type="response"))^2)/
         sum((Train$incidence.dma - mean(Train$incidence.dma))^2))
+
+print(1-sum((Test$incidence.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Test$incidence.dma - mean(Test$incidence.dma))^2))
+
 
 #check names of columns used as predictors: 
 save(gbm.dma, file = "gbm.dma.Rdata")
@@ -1210,6 +1350,7 @@ L$deer.tick = as.numeric(as.character(L$deer.tick))
 L$dma.ggl = factor(L$dma.ggl)
 L = data.frame(L)#have to change back from tibble to data.frame!!
 L$state = factor(L$state)
+L = L[,c("incidence.dma", "pop.dma","garden","mowing","hunting","tick","deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet")]
 
 DP =createDataPartition(L$incidence.dma, p = 0.8)
 Train = L[DP$Resample1,]
@@ -1224,11 +1365,17 @@ gbm.dma = gbm(data=Train,
                             n.trees = ntrees,#fit up to two-way interactions
                             shrinkage = 0.001,
                             interaction.depth = 4,
+                             cv.folds = 10,#getting subscript out of bounds with cv.folds>0
+
                             bag.fraction = 0.5)#default 
 
 print(1-sum((Train$incidence.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
                                          type="response"))^2)/
         sum((Train$incidence.dma - mean(Train$incidence.dma))^2))
+
+print(1-sum((Test$incidence.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Test$incidence.dma - mean(Test$incidence.dma))^2))
 
 #check names of columns used as predictors: 
 save(gbm.dma, file = "gbm.dma.Rdata")
@@ -1247,13 +1394,13 @@ ind = which(x.df$variable == "pop.dma")
 variable = as.character(x.df$variable)
 variable[ind]=as.character("population")
 x.df$variable = variable
-search = rep("Google.search", dim(x.df)[1])
-search[x.df$variable == "population"]="population"
+# search = rep("Google.search", dim(x.df)[1])
+# search[x.df$variable == "population"]="population"
 
 #order variables by relative influence 
 x.df$variable = factor(x.df$variable, levels = 
 x.df$variable[order(x.df$relative.influence)])
-ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+ggplot(data = x.df, aes(x =variable, y = relative.influence))+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
 #  plot.tmp = ggplot()+
 
@@ -1272,3 +1419,67 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 
 ```
+
+#dismo: fit cofeed model, ntrees = 10000, lr = 0.001 -- Cases, including population
+```{r}
+library(dismo)
+
+load("L2.Rdata")
+L = L2
+L = data.frame(L)#have to change back from tibble to data.frame!!
+L$dma.ggl = factor(L$dma.ggl)
+L$state = factor(L$state)
+L$Cases.dma=as.numeric(L$Cases.dma)
+DP =createDataPartition(L$Cases.dma, p = 0.8)
+Train = L[DP$Resample1,]
+Test = L[-DP$Resample1,]
+#ntrees = 50000
+
+ntrees = 10000
+ 
+ # gbm.x = c("pop.dma", "garden","mowing","hunting", "tick", "deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet")
+ gbm.x = which(names(Train) %in% c("pop.dma", "garden","mowing","hunting", "tick", "deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet"))
+#gbm.x = which(names(Train) %in% c("pop.dma", "deer.tick"))
+#gbm.x = c("pop.dma","deer.tick")
+gbm.y = which(names(Train)=="Cases.dma")
+#Train$deer.tick[is.na(Train$deer.tick)]=0
+
+#Train = Train[,c(gbm.x,gbm.y)]
+
+gbm.dismo <- gbm.step(data=Train,
+                            gbm.x = gbm.x,
+                            gbm.y = gbm.y,
+                            tree.complexity = 4,
+                            learning.rate =0.001,
+                            max.trees = ntrees,
+                          family="poisson",#default
+                            n.folds = 10,
+                      bag.fraction =0.5)#default 
+
+print(1-sum((Train$Cases.dma - predict(gbm.dismo, newdata=Train, n.trees =ntrees,
+                                        type="response"))^2)/
+        sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
+
+#once Train is set, then compute R2 for Test
+print(1-sum((Test$Cases.dma - predict(gbm.dismo, newdata=Test, n.trees =ntrees,
+                                         type="response"))^2)/
+        sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
+
+
+#check names of columns used as predictors: 
+ x = summary(gbm.dismo)
+# 
+ x.df= data.frame(variable = x$var, 
+                  relative.influence = x$rel.inf)
+x.df$variable=as.character(x.df$variable)
+x.df$variable = factor(x.df$variable, levels = x.df$variable[order(x.df$relative.influence)])
+ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+#  plot.tmp = ggplot()+
+
+  geom_bar(stat="identity")
+#ggsave("Figure.2.cofeed.relative.jpg")
+save(gbm.dismo, file = "gbm.dismo.Rdata")
+```
+
+
