@@ -116,7 +116,7 @@ Ilya
 
     ## '/Library/Frameworks/R.framework/Resources/bin/R' --no-site-file  \
     ##   --no-environ --no-save --no-restore --quiet CMD INSTALL  \
-    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/RtmpazDwjn/devtools1431e2ba4ad9b/PMassicotte-gtrendsR-35d98c0'  \
+    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/Rtmpn45iEW/devtools10b57d77099f/PMassicotte-gtrendsR-35d98c0'  \
     ##   --library='/Library/Frameworks/R.framework/Versions/3.4/Resources/library'  \
     ##   --install-tests
 
@@ -162,6 +162,50 @@ dma.df = dma.df[order(dma.df$state, dma.df$dma1),]
 save(dma.df, file ="dma.df.Rdata")
 write.csv(dma.df, file = "dma.csv")
 ```
+
+test case getting google trends data
+====================================
+
+``` r
+devtools::install_github("PMassicotte/gtrendsR", branch = "low-search-volume") #use version for getting low search volume regions
+```
+
+    ## Downloading GitHub repo PMassicotte/gtrendsR@master
+    ## from URL https://api.github.com/repos/PMassicotte/gtrendsR/zipball/master
+
+    ## Installing gtrendsR
+
+    ## '/Library/Frameworks/R.framework/Resources/bin/R' --no-site-file  \
+    ##   --no-environ --no-save --no-restore --quiet CMD INSTALL  \
+    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/Rtmpn45iEW/devtools10b576f69d35/PMassicotte-gtrendsR-35d98c0'  \
+    ##   --library='/Library/Frameworks/R.framework/Versions/3.4/Resources/library'  \
+    ##   --install-tests
+
+    ## 
+
+    ## Reloading installed gtrendsR
+
+``` r
+library(gtrendsR) 
+
+time = "2004-01-01 2004-12-31"
+gt <- gtrends(keyword = "tick bite", geo = c("US"), time = time, category = 0, hl = "en-US", low_search_volume = TRUE)
+
+gt_dma <- gt$interest_by_dma
+unique(gt_dma$hits)
+```
+
+    ##  [1] 100  89  78  56  42  36  34  32  30  27  26  25  20  19  18  17  16
+    ## [18]  15  14  12  11  10   9   8   7   6   5   4   3   2   1  NA
+
+``` r
+gt_no_low <- gtrends(keyword = "tick bite", geo = c("US"), time = time, category = 0, hl = "en-US", low_search_volume = FALSE)
+gt_no_low_dma<- gt_no_low$interest_by_dma
+unique(gt_no_low_dma$hits)
+```
+
+    ##  [1] 100  69  55  48  45  42  40  38  32  26  23  22  21  20  17  16  15
+    ## [18]  14  12  10   9   8   7   6   5   4   3  NA
 
 get google trends data
 ======================
@@ -228,7 +272,10 @@ b =1
 #     low_search_volume = TRUE)
 # tmp$interest_by_dma$hits
 # tmp$interest_by_dma$location
-    
+#get test search results
+a = 1
+year_subset= subset(days_df, lag == 0 & year == years[a])
+
 for (a in 1:length(years)){
 #for (a in c(1:2)){#test set
   print(a)
@@ -842,7 +889,7 @@ mapshot(M, file = "incidence.png")
 M
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-4-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
 ##### read in shapefile of counties and make map of incidence\_rescaled (from 0 to 1) by county -- to see if rescaling data makes patterns more apparent
 
@@ -895,7 +942,7 @@ inc_resc_map<- leaflet(outC) %>%
 inc_resc_map
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-5-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
 ``` r
 #mapshot(N, file = "incidence_rescaled.png")
@@ -958,7 +1005,7 @@ leaflet(outC) %>%
      labFormat = labelFormat(transform = function(x) round(10^x)))
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-6-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
 ##### read in shapefile of counties and make map of hunting\_rescaled by dma, together with outlines of counties by dma
 
@@ -1307,9 +1354,9 @@ summary(L2)
     ##  incidence.dma           deet           state          
     ##  Min.   :  0.0000   Min.   :  0.00   Length:2379       
     ##  1st Qu.:  0.0000   1st Qu.:  0.00   Class :character  
-    ##  Median :  0.4248   Median : 11.00   Mode  :character  
-    ##  Mean   :  7.8521   Mean   : 16.11                     
-    ##  3rd Qu.:  1.6906   3rd Qu.: 26.00                     
+    ##  Median :  0.4248   Median : 13.00   Mode  :character  
+    ##  Mean   :  7.8521   Mean   : 17.27                     
+    ##  3rd Qu.:  1.6906   3rd Qu.: 29.00                     
     ##  Max.   :268.9252   Max.   :100.00
 
 ##### summarize by dma
@@ -1364,36 +1411,36 @@ summary(L2)
     ##                                                                       
     ##  incidence.dma          garden           mowing          hunting      
     ##  Min.   :  0.0000   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
-    ##  1st Qu.:  0.0000   1st Qu.: 30.00   1st Qu.:  7.00   1st Qu.: 14.00  
-    ##  Median :  0.4248   Median : 35.00   Median : 19.00   Median : 24.00  
-    ##  Mean   :  7.8521   Mean   : 36.17   Mean   : 21.84   Mean   : 27.68  
-    ##  3rd Qu.:  1.6906   3rd Qu.: 41.00   3rd Qu.: 31.00   3rd Qu.: 37.00  
+    ##  1st Qu.:  0.0000   1st Qu.: 30.00   1st Qu.:  6.00   1st Qu.: 15.00  
+    ##  Median :  0.4248   Median : 36.00   Median : 16.00   Median : 23.00  
+    ##  Mean   :  7.8521   Mean   : 36.99   Mean   : 20.24   Mean   : 27.08  
+    ##  3rd Qu.:  1.6906   3rd Qu.: 43.00   3rd Qu.: 30.00   3rd Qu.: 35.00  
     ##  Max.   :268.9252   Max.   :100.00   Max.   :100.00   Max.   :100.00  
     ##                                                                       
-    ##       tick          deer.tick        tick.bite        tick.bites    
-    ##  Min.   :  0.00   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
-    ##  1st Qu.: 21.00   1st Qu.:  0.00   1st Qu.:  0.00   1st Qu.:  0.00  
-    ##  Median : 31.00   Median :  4.00   Median : 11.00   Median :  0.00  
-    ##  Mean   : 32.82   Mean   : 10.15   Mean   : 16.15   Mean   : 12.96  
-    ##  3rd Qu.: 42.00   3rd Qu.: 14.00   3rd Qu.: 25.00   3rd Qu.: 22.00  
-    ##  Max.   :100.00   Max.   :100.00   Max.   :100.00   Max.   :100.00  
-    ##                                                                     
+    ##       tick          deer.tick        tick.bite       tick.bites    
+    ##  Min.   :  0.00   Min.   :  0.00   Min.   :  0.0   Min.   :  0.00  
+    ##  1st Qu.: 17.00   1st Qu.:  0.00   1st Qu.:  0.0   1st Qu.:  0.00  
+    ##  Median : 27.00   Median :  4.00   Median : 13.0   Median :  0.00  
+    ##  Mean   : 29.54   Mean   : 10.69   Mean   : 17.9   Mean   : 12.08  
+    ##  3rd Qu.: 39.00   3rd Qu.: 15.00   3rd Qu.: 28.0   3rd Qu.: 20.00  
+    ##  Max.   :100.00   Max.   :100.00   Max.   :100.0   Max.   :100.00  
+    ##                                                                    
     ##      ticks           chipmunk        mouse.trap          deer       
     ##  Min.   :  0.00   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
-    ##  1st Qu.: 12.00   1st Qu.:  9.00   1st Qu.:  0.00   1st Qu.: 19.00  
-    ##  Median : 20.00   Median : 23.00   Median : 17.00   Median : 29.00  
-    ##  Mean   : 22.04   Mean   : 23.94   Mean   : 22.12   Mean   : 32.66  
-    ##  3rd Qu.: 29.00   3rd Qu.: 34.00   3rd Qu.: 39.00   3rd Qu.: 43.00  
+    ##  1st Qu.: 12.00   1st Qu.: 12.00   1st Qu.:  0.00   1st Qu.: 22.00  
+    ##  Median : 18.00   Median : 23.00   Median : 16.00   Median : 33.00  
+    ##  Mean   : 19.63   Mean   : 23.46   Mean   : 21.96   Mean   : 35.54  
+    ##  3rd Qu.: 25.00   3rd Qu.: 32.00   3rd Qu.: 39.00   3rd Qu.: 45.00  
     ##  Max.   :100.00   Max.   :100.00   Max.   :100.00   Max.   :100.00  
     ##                   NA's   :183      NA's   :183      NA's   :366     
-    ##      acorns         repellent          hiking            deet       
-    ##  Min.   :  0.00   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
-    ##  1st Qu.:  0.00   1st Qu.: 14.00   1st Qu.: 17.00   1st Qu.:  0.00  
-    ##  Median : 12.00   Median : 26.00   Median : 23.00   Median : 11.00  
-    ##  Mean   : 15.79   Mean   : 28.25   Mean   : 27.23   Mean   : 16.11  
-    ##  3rd Qu.: 24.00   3rd Qu.: 40.00   3rd Qu.: 34.00   3rd Qu.: 26.00  
-    ##  Max.   :100.00   Max.   :100.00   Max.   :100.00   Max.   :100.00  
-    ##  NA's   :366                                                        
+    ##      acorns      repellent          hiking            deet       
+    ##  Min.   :  0   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
+    ##  1st Qu.:  0   1st Qu.: 11.00   1st Qu.: 17.00   1st Qu.:  0.00  
+    ##  Median : 12   Median : 27.00   Median : 23.00   Median : 13.00  
+    ##  Mean   : 16   Mean   : 28.18   Mean   : 27.84   Mean   : 17.27  
+    ##  3rd Qu.: 25   3rd Qu.: 43.00   3rd Qu.: 35.00   3rd Qu.: 29.00  
+    ##  Max.   :100   Max.   :100.00   Max.   :100.00   Max.   :100.00  
+    ##  NA's   :366                                                     
     ##     state          
     ##  Length:2379       
     ##  Class :character  
@@ -1503,7 +1550,7 @@ gbm.dma = gbm(data=Train,
                             distribution = "poisson",
                             n.trees = ntrees,#fit up to two-way interactions
                             shrinkage = 0.001,
-                            cv.folds = 5,#getting subscript out of bounds with cv.folds>0
+                            cv.folds = 10,#getting subscript out of bounds with cv.folds>0
                             interaction.depth = 4,
                             bag.fraction = 0.5)#default 
 
@@ -1512,23 +1559,19 @@ print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
 ```
 
-    ## [1] 0.9247633
+    ## [1] 0.9188009
 
 ``` r
-print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
-                                         type="response"))^2)/
-        sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
-```
+# print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
+#                                          type="response"))^2)/
+#         sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
 
-    ## [1] 0.6975303
-
-``` r
 #check names of columns used as predictors: 
 save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-10-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
 ``` r
 #write results to csv
@@ -1548,22 +1591,22 @@ print(x.df)
 ```
 
     ##      variable relative.influence
-    ## 1     pop.dma             61.237
-    ## 2   deer.tick             18.577
-    ## 3  tick.bites              9.393
-    ## 4   tick.bite              3.985
-    ## 5      garden              1.906
-    ## 6     hunting              1.246
-    ## 7      hiking              0.833
-    ## 8        tick              0.570
-    ## 9        deer              0.513
-    ## 10   chipmunk              0.413
-    ## 11      ticks              0.347
-    ## 12     mowing              0.250
-    ## 13 mouse.trap              0.220
-    ## 14       deet              0.213
-    ## 15     acorns              0.185
-    ## 16  repellent              0.111
+    ## 1     pop.dma             59.799
+    ## 2   deer.tick             23.966
+    ## 3  tick.bites              4.642
+    ## 4   tick.bite              3.658
+    ## 5      garden              2.004
+    ## 6        deer              1.088
+    ## 7     hunting              0.859
+    ## 8      acorns              0.729
+    ## 9      hiking              0.714
+    ## 10       tick              0.581
+    ## 11      ticks              0.532
+    ## 12     mowing              0.492
+    ## 13  repellent              0.448
+    ## 14 mouse.trap              0.201
+    ## 15   chipmunk              0.197
+    ## 16       deet              0.090
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -1580,7 +1623,7 @@ ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-10-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-11-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
@@ -1602,7 +1645,7 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-11-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
 ##### predict cases, predictors include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
 
@@ -1631,7 +1674,7 @@ gbm.dma = gbm(data=Train,
                             distribution = "poisson",#default
                             n.trees = ntrees,#fit up to two-way interactions
                             shrinkage = 0.001,
-                            cv.folds = 5,#getting subscript out of bounds with cv.folds>0
+                            cv.folds = 10,#getting subscript out of bounds with cv.folds>0
                             interaction.depth = 4,
                             bag.fraction = 0.5)#default 
 
@@ -1640,23 +1683,19 @@ print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
 ```
 
-    ## [1] 0.9912115
+    ## [1] 0.9910489
 
 ``` r
-print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
-                                         type="response"))^2)/
-        sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
-```
+# print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
+#                                          type="response"))^2)/
+#         sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
 
-    ## [1] 0.6095708
-
-``` r
 #check names of columns used as predictors: 
 save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-12-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-13-1.png)
 
 ``` r
 #write results to csv
@@ -1676,22 +1715,22 @@ print(x.df)
 ```
 
     ##      variable relative.influence
-    ## 1     pop.dma             58.741
-    ## 2   deer.tick             18.556
-    ## 3  tick.bites              9.180
-    ## 4   tick.bite              4.079
-    ## 5      garden              2.005
-    ## 6     hunting              1.597
-    ## 7      hiking              0.979
-    ## 8        deer              0.835
-    ## 9        tick              0.763
-    ## 10   chipmunk              0.737
-    ## 11 mouse.trap              0.587
-    ## 12      ticks              0.523
-    ## 13       deet              0.414
-    ## 14     mowing              0.406
-    ## 15     acorns              0.395
-    ## 16  repellent              0.203
+    ## 1     pop.dma             57.122
+    ## 2   deer.tick             23.463
+    ## 3  tick.bites              5.012
+    ## 4   tick.bite              3.813
+    ## 5      garden              2.101
+    ## 6        deer              1.594
+    ## 7     hunting              1.138
+    ## 8      hiking              0.936
+    ## 9      acorns              0.861
+    ## 10       tick              0.767
+    ## 11     mowing              0.734
+    ## 12      ticks              0.693
+    ## 13  repellent              0.621
+    ## 14 mouse.trap              0.444
+    ## 15   chipmunk              0.439
+    ## 16       deet              0.261
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -1711,7 +1750,7 @@ ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-12-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-13-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
@@ -1733,7 +1772,7 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-13-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-14-1.png)
 
 ####### predict cases, predictors DO NOT include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
 
@@ -1762,7 +1801,7 @@ gbm.dma = gbm(data=Train,
                             distribution = "poisson",#default
                             n.trees = ntrees,#fit up to two-way interactions
                             shrinkage = 0.001,
-                            cv.folds = 5,#getting subscript out of bounds with cv.folds>0
+                            cv.folds = 10,#getting subscript out of bounds with cv.folds>0
                             interaction.depth = 4,
                             bag.fraction = 0.5)#default 
 
@@ -1771,23 +1810,19 @@ print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
 ```
 
-    ## [1] 0.980193
+    ## [1] 0.9803489
 
 ``` r
-print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
-                                         type="response"))^2)/
-        sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
-```
+# print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
+#                                          type="response"))^2)/
+#         sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
 
-    ## [1] 0.1914954
-
-``` r
 #check names of columns used as predictors: 
 save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-14-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-1.png)
 
 ``` r
 #write results to csv
@@ -1807,21 +1842,21 @@ print(x.df)
 ```
 
     ##      variable relative.influence
-    ## 1   deer.tick             22.575
-    ## 2     hunting             22.548
-    ## 3      garden             14.655
-    ## 4  tick.bites              9.635
-    ## 5        deer              6.117
-    ## 6   tick.bite              5.808
-    ## 7  mouse.trap              3.330
-    ## 8      mowing              2.816
-    ## 9    chipmunk              2.658
-    ## 10       deet              2.389
-    ## 11  repellent              2.226
-    ## 12       tick              1.457
-    ## 13     acorns              1.315
-    ## 14     hiking              1.289
-    ## 15      ticks              1.182
+    ## 1     hunting             24.949
+    ## 2   deer.tick             24.143
+    ## 3      garden             16.805
+    ## 4  tick.bites              7.364
+    ## 5        deer              5.846
+    ## 6   repellent              3.655
+    ## 7   tick.bite              3.177
+    ## 8        deet              2.681
+    ## 9  mouse.trap              2.648
+    ## 10     hiking              1.990
+    ## 11     acorns              1.641
+    ## 12     mowing              1.573
+    ## 13       tick              1.328
+    ## 14   chipmunk              1.316
+    ## 15      ticks              0.886
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -1841,7 +1876,7 @@ ggplot(data = x.df, aes(x =variable, y = relative.influence))+
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-14-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
@@ -1863,7 +1898,7 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
 ##### predict incidence, predictors include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
 
@@ -1893,7 +1928,7 @@ gbm.dma = gbm(data=Train,
                             n.trees = ntrees,#fit up to two-way interactions
                             shrinkage = 0.001,
                             interaction.depth = 4,
-                            cv.folds = 5,#getting subscript out of bounds with cv.folds>0
+                            cv.folds = 10,#getting subscript out of bounds with cv.folds>0
 
                             bag.fraction = 0.5)#default 
 
@@ -1902,23 +1937,20 @@ print(1-sum((Train$incidence.dma - predict(gbm.dma, newdata=Train, n.trees =ntre
         sum((Train$incidence.dma - mean(Train$incidence.dma))^2))
 ```
 
-    ## [1] 0.9420752
+    ## [1] 0.9437506
 
 ``` r
-print(1-sum((Test$incidence.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
-                                         type="response"))^2)/
-        sum((Test$incidence.dma - mean(Test$incidence.dma))^2))
-```
+# print(1-sum((Test$incidence.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
+#                                          type="response"))^2)/
+#         sum((Test$incidence.dma - mean(Test$incidence.dma))^2))
 
-    ## [1] 0.5572294
 
-``` r
 #check names of columns used as predictors: 
 save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-16-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-17-1.png)
 
 ``` r
 #write results to csv
@@ -1938,22 +1970,22 @@ print(x.df)
 ```
 
     ##      variable relative.influence
-    ## 1   deer.tick             38.502
-    ## 2     pop.dma             10.313
-    ## 3        tick              8.452
-    ## 4   tick.bite              6.266
-    ## 5     hunting              4.806
-    ## 6        deer              4.666
-    ## 7    chipmunk              4.520
-    ## 8  mouse.trap              4.305
-    ## 9  tick.bites              4.000
-    ## 10     mowing              2.717
-    ## 11     hiking              2.451
-    ## 12     garden              2.381
-    ## 13     acorns              2.372
-    ## 14       deet              1.612
-    ## 15  repellent              1.347
-    ## 16      ticks              1.292
+    ## 1   deer.tick             35.436
+    ## 2     pop.dma             12.266
+    ## 3   tick.bite             10.410
+    ## 4        deer              6.993
+    ## 5      acorns              6.585
+    ## 6        tick              4.234
+    ## 7  mouse.trap              3.275
+    ## 8    chipmunk              3.146
+    ## 9     hunting              2.983
+    ## 10      ticks              2.685
+    ## 11 tick.bites              2.651
+    ## 12     hiking              2.589
+    ## 13  repellent              1.789
+    ## 14     mowing              1.748
+    ## 15       deet              1.745
+    ## 16     garden              1.466
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -1973,7 +2005,7 @@ ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-16-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-17-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
@@ -1995,7 +2027,7 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-17-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-18-1.png)
 
 ##### predict incidence, predictors do not include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
 
@@ -2034,23 +2066,20 @@ print(1-sum((Train$incidence.dma - predict(gbm.dma, newdata=Train, n.trees =ntre
         sum((Train$incidence.dma - mean(Train$incidence.dma))^2))
 ```
 
-    ## [1] 0.9192183
+    ## [1] 0.9186909
 
 ``` r
-print(1-sum((Test$incidence.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
-                                         type="response"))^2)/
-        sum((Test$incidence.dma - mean(Test$incidence.dma))^2))
-```
+#get accuracy against test set
+# print(1-sum((Test$incidence.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
+#                                          type="response"))^2)/
+#         sum((Test$incidence.dma - mean(Test$incidence.dma))^2))
 
-    ## [1] 0.2899977
-
-``` r
 #check names of columns used as predictors: 
 save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-18-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-19-1.png)
 
 ``` r
 #write results to csv
@@ -2070,21 +2099,21 @@ print(x.df)
 ```
 
     ##      variable relative.influence
-    ## 1   deer.tick             39.037
-    ## 2        tick              8.257
-    ## 3   tick.bite              6.616
-    ## 4  mouse.trap              5.964
-    ## 5        deer              5.782
-    ## 6     hunting              5.485
-    ## 7    chipmunk              5.188
-    ## 8  tick.bites              4.745
-    ## 9      mowing              4.610
-    ## 10     acorns              3.214
-    ## 11     hiking              3.038
-    ## 12     garden              2.423
-    ## 13       deet              2.115
-    ## 14  repellent              1.811
-    ## 15      ticks              1.714
+    ## 1   deer.tick             35.601
+    ## 2   tick.bite             11.188
+    ## 3        deer              8.692
+    ## 4      acorns              8.501
+    ## 5        tick              4.776
+    ## 6  mouse.trap              4.489
+    ## 7    chipmunk              4.318
+    ## 8     hunting              3.821
+    ## 9  tick.bites              3.726
+    ## 10      ticks              2.909
+    ## 11     hiking              2.873
+    ## 12     mowing              2.466
+    ## 13  repellent              2.423
+    ## 14       deet              2.416
+    ## 15     garden              1.801
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -2104,7 +2133,7 @@ ggplot(data = x.df, aes(x =variable, y = relative.influence))+
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-18-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-19-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
@@ -2126,319 +2155,68 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-19-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-20-1.png)
 
 dismo: fit cofeed model, ntrees = 10000, lr = 0.001 -- Cases, including population
 ==================================================================================
 
 ``` r
-library(dismo)
-
-load("L2.Rdata")
-L = L2
-L = data.frame(L)#have to change back from tibble to data.frame!!
-L$dma.ggl = factor(L$dma.ggl)
-L$state = factor(L$state)
-L$Cases.dma=as.numeric(L$Cases.dma)
-DP =createDataPartition(L$Cases.dma, p = 0.8)
-Train = L[DP$Resample1,]
-Test = L[-DP$Resample1,]
-#ntrees = 50000
-
-ntrees = 10000
- 
- # gbm.x = c("pop.dma", "garden","mowing","hunting", "tick", "deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet")
- gbm.x = which(names(Train) %in% c("pop.dma", "garden","mowing","hunting", "tick", "deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet"))
-#gbm.x = which(names(Train) %in% c("pop.dma", "deer.tick"))
-#gbm.x = c("pop.dma","deer.tick")
-gbm.y = which(names(Train)=="Cases.dma")
-#Train$deer.tick[is.na(Train$deer.tick)]=0
-
-#Train = Train[,c(gbm.x,gbm.y)]
-
-gbm.dismo <- gbm.step(data=Train,
-                            gbm.x = gbm.x,
-                            gbm.y = gbm.y,
-                            tree.complexity = 4,
-                            learning.rate =0.001,
-                            max.trees = ntrees,
-                          family="poisson",#default
-                            n.folds = 10,
-                      bag.fraction =0.5)#default 
-```
-
-    ## 
-    ##  
-    ##  GBM STEP - version 2.9 
-    ##  
-    ## Performing cross-validation optimisation of a boosted regression tree model 
-    ## for Cases.dma and using a family of poisson 
-    ## Using 1904 observations and 16 predictors 
-    ## creating 10 initial models of 50 trees 
-    ## 
-    ##  folds are unstratified 
-    ## total mean deviance =  768.0028 
-    ## tolerance is fixed at  0.768 
-    ## ntrees resid. dev. 
-    ## 50    724.2158 
-    ## now adding trees... 
-    ## 100   681.7145 
-    ## 150   643.3839 
-    ## 200   608.7743 
-    ## 250   577.1469 
-    ## 300   548.0328 
-    ## 350   521.5022 
-    ## 400   497.071 
-    ## 450   474.5912 
-    ## 500   453.4632 
-    ## 550   434.1479 
-    ## 600   416.076 
-    ## 650   399.1457 
-    ## 700   383.4661 
-    ## 750   368.9365 
-    ## 800   355.2475 
-    ## 850   342.646 
-    ## 900   330.8477 
-    ## 950   319.7726 
-    ## 1000   309.5471 
-    ## 1050   299.9412 
-    ## 1100   290.5924 
-    ## 1150   282.2186 
-    ## 1200   274.198 
-    ## 1250   266.6509 
-    ## 1300   259.7333 
-    ## 1350   253.2056 
-    ## 1400   247.0667 
-    ## 1450   241.2997 
-    ## 1500   235.9688 
-    ## 1550   231.0447 
-    ## 1600   226.3128 
-    ## 1650   221.8454 
-    ## 1700   217.734 
-    ## 1750   213.9092 
-    ## 1800   210.2558 
-    ## 1850   206.9128 
-    ## 1900   203.809 
-    ## 1950   200.763 
-    ## 2000   197.9646 
-    ## 2050   195.2888 
-    ## 2100   192.936 
-    ## 2150   190.5192 
-    ## 2200   188.2901 
-    ## 2250   186.0973 
-    ## 2300   184.0793 
-    ## 2350   182.2295 
-    ## 2400   180.5127 
-    ## 2450   178.8123 
-    ## 2500   177.3095 
-    ## 2550   175.8419 
-    ## 2600   174.4208 
-    ## 2650   173.172 
-    ## 2700   171.8523 
-    ## 2750   170.5771 
-    ## 2800   169.3219 
-    ## 2850   168.299 
-    ## 2900   167.241 
-    ## 2950   166.1431 
-    ## 3000   165.1439 
-    ## 3050   164.1632 
-    ## 3100   163.2786 
-    ## 3150   162.3525 
-    ## 3200   161.521 
-    ## 3250   160.7393 
-    ## 3300   159.9491 
-    ## 3350   159.209 
-    ## 3400   158.4145 
-    ## 3450   157.6961 
-    ## 3500   157.0089 
-    ## 3550   156.4212 
-    ## 3600   155.7586 
-    ## 3650   155.136 
-    ## 3700   154.5883 
-    ## 3750   154.0093 
-    ## 3800   153.5505 
-    ## 3850   153.0676 
-    ## 3900   152.5318 
-    ## 3950   152.0037 
-    ## 4000   151.5713 
-    ## 4050   151.0779 
-    ## 4100   150.6463 
-    ## 4150   150.2499 
-    ## 4200   149.819 
-    ## 4250   149.4034 
-    ## 4300   148.9901 
-    ## 4350   148.5985 
-    ## 4400   148.2431 
-    ## 4450   147.9178 
-    ## 4500   147.5946 
-    ## 4550   147.3038 
-    ## 4600   147.0273 
-    ## 4650   146.7284 
-    ## 4700   146.4315 
-    ## 4750   146.1582 
-    ## 4800   145.8785 
-    ## 4850   145.6139 
-    ## 4900   145.3681 
-    ## 4950   145.1431 
-    ## 5000   144.9287 
-    ## 5050   144.6666 
-    ## 5100   144.4686 
-    ## 5150   144.2266 
-    ## 5200   144.0323 
-    ## 5250   143.8274 
-    ## 5300   143.6241 
-    ## 5350   143.4296 
-    ## 5400   143.2529 
-    ## 5450   143.0909 
-    ## 5500   142.9527 
-    ## 5550   142.7714 
-    ## 5600   142.5896 
-    ## 5650   142.4011 
-    ## 5700   142.238 
-    ## 5750   142.0909 
-    ## 5800   141.9307 
-    ## 5850   141.7636 
-    ## 5900   141.6044 
-    ## 5950   141.4578 
-    ## 6000   141.3434 
-    ## 6050   141.201 
-    ## 6100   141.0687 
-    ## 6150   140.962 
-    ## 6200   140.8293 
-    ## 6250   140.7237 
-    ## 6300   140.6072 
-    ## 6350   140.4583 
-    ## 6400   140.3363 
-    ## 6450   140.2231 
-    ## 6500   140.0762 
-    ## 6550   139.9625 
-    ## 6600   139.8684 
-    ## 6650   139.7336 
-    ## 6700   139.5896 
-    ## 6750   139.474 
-    ## 6800   139.3443 
-    ## 6850   139.2139 
-    ## 6900   139.1299 
-    ## 6950   139.0557 
-    ## 7000   138.9311 
-    ## 7050   138.8505 
-    ## 7100   138.7167 
-    ## 7150   138.5956 
-    ## 7200   138.5101 
-    ## 7250   138.4127 
-    ## 7300   138.2851 
-    ## 7350   138.1988 
-    ## 7400   138.087 
-    ## 7450   137.9608 
-    ## 7500   137.8683 
-    ## 7550   137.7714 
-    ## 7600   137.677 
-    ## 7650   137.5178 
-    ## 7700   137.396 
-    ## 7750   137.2867 
-    ## 7800   137.15 
-    ## 7850   137.0104 
-    ## 7900   136.95 
-    ## 7950   136.8472 
-    ## 8000   136.7617 
-    ## 8050   136.6569 
-    ## 8100   136.5932 
-    ## 8150   136.5355 
-    ## 8200   136.434 
-    ## 8250   136.3225 
-    ## 8300   136.2641 
-    ## 8350   136.1262 
-    ## 8400   135.9843 
-    ## 8450   135.853 
-    ## 8500   135.7974 
-    ## 8550   135.6738 
-    ## 8600   135.6353 
-    ## 8650   135.5305 
-    ## 8700   135.453 
-    ## 8750   135.3544 
-    ## 8800   135.2771 
-    ## 8850   135.2023 
-    ## 8900   135.1121 
-    ## 8950   135.0013 
-    ## 9000   134.8886 
-    ## 9050   134.7705 
-    ## 9100   134.7047 
-    ## 9150   134.596 
-    ## 9200   134.5023 
-    ## 9250   134.4273 
-    ## 9300   134.3482 
-    ## 9350   134.2714 
-    ## 9400   134.2219 
-    ## 9450   134.1649 
-    ## 9500   134.1616 
-    ## 9550   134.09 
-    ## 9600   134.0192 
-    ## 9650   133.9098 
-    ## 9700   133.8599
-
-    ## fitting final gbm model with a fixed number of 9700 trees for Cases.dma
-
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-20-1.png)
-
-    ## 
-    ## mean total deviance = 768.003 
-    ## mean residual deviance = 83.725 
-    ##  
-    ## estimated cv deviance = 133.86 ; se = 21.706 
-    ##  
-    ## training data correlation = 0.956 
-    ## cv correlation =  0.865 ; se = 0.021 
-    ##  
-    ## elapsed time -  0.06 minutes
-
-``` r
-print(1-sum((Train$Cases.dma - predict(gbm.dismo, newdata=Train, n.trees =ntrees,
-                                        type="response"))^2)/
-        sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
-```
-
-    ## Warning in predict.gbm(gbm.dismo, newdata = Train, n.trees = ntrees, type
-    ## = "response"): Number of trees not specified or exceeded number fit so far.
-    ## Using 9700.
-
-    ## [1] 0.9130534
-
-``` r
-#once Train is set, then compute R2 for Test
-print(1-sum((Test$Cases.dma - predict(gbm.dismo, newdata=Test, n.trees =ntrees,
-                                         type="response"))^2)/
-        sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
-```
-
-    ## Warning in predict.gbm(gbm.dismo, newdata = Test, n.trees = ntrees, type =
-    ## "response"): Number of trees not specified or exceeded number fit so far.
-    ## Using 9700.
-
-    ## [1] 0.7086419
-
-``` r
-#check names of columns used as predictors: 
- x = summary(gbm.dismo)
-```
-
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-20-2.png)
-
-``` r
+# library(dismo)
 # 
- x.df= data.frame(variable = x$var, 
-                  relative.influence = x$rel.inf)
-x.df$variable=as.character(x.df$variable)
-x.df$variable = factor(x.df$variable, levels = x.df$variable[order(x.df$relative.influence)])
-ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-#  plot.tmp = ggplot()+
-
-  geom_bar(stat="identity")
-```
-
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-20-3.png)
-
-``` r
-#ggsave("Figure.2.cofeed.relative.jpg")
-save(gbm.dismo, file = "gbm.dismo.Rdata")
+# load("L2.Rdata")
+# L = L2
+# L = data.frame(L)#have to change back from tibble to data.frame!!
+# L$dma.ggl = factor(L$dma.ggl)
+# L$state = factor(L$state)
+# L$Cases.dma=as.numeric(L$Cases.dma)
+# DP =createDataPartition(L$Cases.dma, p = 0.8)
+# Train = L[DP$Resample1,]
+# Test = L[-DP$Resample1,]
+# #ntrees = 50000
+# 
+# ntrees = 10000
+#  
+#  # gbm.x = c("pop.dma", "garden","mowing","hunting", "tick", "deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet")
+#  gbm.x = which(names(Train) %in% c("pop.dma", "garden","mowing","hunting", "tick", "deer.tick", "tick.bite","tick.bites","ticks","chipmunk","mouse.trap","deer","acorns","repellent","hiking","deet"))
+# #gbm.x = which(names(Train) %in% c("pop.dma", "deer.tick"))
+# #gbm.x = c("pop.dma","deer.tick")
+# gbm.y = which(names(Train)=="Cases.dma")
+# #Train$deer.tick[is.na(Train$deer.tick)]=0
+# 
+# #Train = Train[,c(gbm.x,gbm.y)]
+# 
+# gbm.dismo <- gbm.step(data=Train,
+#                             gbm.x = gbm.x,
+#                             gbm.y = gbm.y,
+#                             tree.complexity = 4,
+#                             learning.rate =0.001,
+#                             max.trees = ntrees,
+#                           family="poisson",#default
+#                             n.folds = 10,
+#                       bag.fraction =0.5)#default 
+# 
+# print(1-sum((Train$Cases.dma - predict(gbm.dismo, newdata=Train, n.trees =ntrees,
+#                                         type="response"))^2)/
+#         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
+# 
+# #once Train is set, then compute R2 for Test
+# print(1-sum((Test$Cases.dma - predict(gbm.dismo, newdata=Test, n.trees =ntrees,
+#                                          type="response"))^2)/
+#         sum((Test$Cases.dma - mean(Test$Cases.dma))^2))
+# 
+# 
+# #check names of columns used as predictors: 
+#  x = summary(gbm.dismo)
+# # 
+#  x.df= data.frame(variable = x$var, 
+#                   relative.influence = x$rel.inf)
+# x.df$variable=as.character(x.df$variable)
+# x.df$variable = factor(x.df$variable, levels = x.df$variable[order(x.df$relative.influence)])
+# ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+# #  plot.tmp = ggplot()+
+# 
+#   geom_bar(stat="identity")
+# #ggsave("Figure.2.cofeed.relative.jpg")
+# save(gbm.dismo, file = "gbm.dismo.Rdata")
 ```
