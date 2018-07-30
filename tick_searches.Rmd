@@ -28,7 +28,7 @@ pkgTest <- function(x)
   library(x, character.only = TRUE)
 }
 neededPackages <- c("sp", "raster", "leaflet", "geojsonio", "lubridate", "data.table", "devtools", "dplyr", "gbm", "caret", "cowplot", "ggplot2", 
-                      "ggstance", "tmaptools", "scales", "mapview", "tidyr", "sp")
+                      "ggstance", "tmaptools", "scales", "mapview", "tidyr", "sp", "anchors", "reticulate")
 for (package in neededPackages){pkgTest(package)}
 #scales: for rescale_mid
 library(devtools)
@@ -88,7 +88,7 @@ gt_no_low_dma<- gt_no_low$interest_by_dma
 unique(gt_no_low_dma$hits)
 ```
 
-#get google trends data
+#get google trends data -- annual
 #####We used the term "tick bite", and the top 10 related queries for that term. We excluded queries related to tick species other than the blacklegged tick (Ixodes scapularis), and related to tick encounters with pets. We also excluded queries such as "what does tick bite look like", that contain within it other search terms already included (in this case, "tick bite"). We also included several search terms related to ecological factors (e.g. "deer") and behavioral factors (e.g. "repellent") that may mediate risk. Google Trends values are from 0 to 100. Values reflect the popularity of a search term, relative to the popularity of other search terms within a geographical area. 
 ```{r}
 
@@ -508,7 +508,7 @@ L1 = merge(Lc, gt, by = c("dma.ggl", "year"))
 save(L1, file = "L1.Rdata")
 ```
 
-#####summarize by county across time for plotting
+#####summarize by county across time for plotting - not for use in data analysis
 ```{r}
 load("L1.Rdata")
 L1$tick.bites = L1[,20]
@@ -889,6 +889,112 @@ leaflet(outC) %>%
 
 ```
 
+#read in L1 data, do linear regression
+```{r}
+library(lme4)
+library(ggplot2)
+library(lmerTest)
+require(MuMIn)
+load("L1.Rdata")
+summary(L1)
+
+L1$tick.bites = L1[,20]
+m1 = lmer(incidence ~ tick.bite+tick+ticks +tick.bites+(1|dma.ggl), data = L1)
+summary(m1)
+
+m2 = lmer(incidence ~ tick.bite+tick+ticks +tick.bites+garden+mowing+hiking+hunting+deer+repellent+deer.tick+chipmunk+mouse.trap+deer+ acorns+ mouse+ (1|dma.ggl), data = L1)
+
+r.squaredGLMM(m1)#conditional is fixed plus random effects
+r.squaredGLMM(m2)
+model.sel(m1, m2)
+L1$incidence.plot = L1$incidence+0.00001
+plot <- ggplot(data = L1, aes(x = tick.bite, y= incidence.plot))+
+  #geom_point(alpha = 0.5, aes(color = factor(dma.ggl)))
+  geom_point(alpha = 0.5)+
+  geom_smooth()+
+  scale_y_log10()
+plot
+library(rsq)
+#rsq(m1)  
+```
+
+#reshape for keras for scalar regression
+
+#####read in shapefile of counties and add to it L1 data, then rasterize
+
+```{r rasterize}
+
+require(raster)
+library(rgdal)
+C <- shapefile("/Users/fischhoff/app_wild/tick_searches/age_codes/cb_2017_us_county_500k.shp")
+C$COUNTYFP=as.numeric(as.character(C$COUNTYFP))
+C$STATEFP=as.numeric(as.character(C$STATEFP))
+C$state_county_fp = paste(C$STATEFP, C$COUNTYFP)
+load("L1.Rdata")
+
+L = L1
+L$dma.ggl = as.numeric(factor(L$dma.ggl))
+L$state = as.numeric(factor(L$state))
+pred_name_inds = c(1,2, 7:26)
+names= names(L)[pred_name_inds]
+L = replace.value( L, names=names, from=NA, to=0)
+
+DP =createDataPartition(L$incidence, p = 0.8)
+Train = L[DP$Resample1,]
+train_data = Train[,pred_name_inds]
+train_targets= Train[,c("year", "incidence", "state_county_fp")]#needs to be reshaped
+Test = L[-DP$Resample1,]
+test_data = Test[,pred_name_inds]
+test_targets= Test[,c("year", "incidence", "state_county_fp")]
+
+Train = data.frame(Train)
+uyear = unique(train_data$year)
+nimage = 180
+
+a = 1
+L_yr = subset(train_data, year == uyear[a])
+outC <- append_data(C, L_yr, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+pred_names = names(outC[c(13:31)])
+
+#matrix for train data
+
+#4D tensor with shape: (batch, channels, rows, cols) if data_format is #"channels_first"
+train_data_mat = array(0, dim = c(length(uyear), length(pred_names), nimage, nimage))
+a = 1
+b = 10
+for (a in 1:length(uyear)){#for loop through years
+  print(a)
+      L_yr = subset(train_data, year == uyear[a])
+    outC <- append_data(C, L_yr, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+  for (b in 1:length(pred_names)){#for loop through predictors
+    print(b)
+    r <- raster(ncol=nimage, nrow=nimage)
+  extent(r) <- extent(outC)
+  rp <- rasterize(outC, r, pred_names[b])
+  rp_mat = raster::as.array(rp)
+  train_data_mat[a, b, ,]=rp_mat
+  }
+}
+
+train_targets_mat = array(0, dim = c(length(uyear), 1, nimage, nimage))
+
+for (a in 1:length(uyear)){#for loop through years
+      L_yr = subset(train_targets, year == uyear[a])
+    outC <- append_data(C, L_yr, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+#  for (b in 1:length(pred_names)){#for loop through predictors
+    r <- raster(ncol=nimage, nrow=nimage)
+  extent(r) <- extent(outC)
+  rp <- rasterize(outC, r, "incidence")
+  rp_mat = raster::as.array(rp)
+  train_targets_mat[a, 1, , ]=rp_mat
+#  }
+}
+
+```
+
 #####summarize by dma -- test with one variable
 ```{r}
 load("L1.Rdata")
@@ -946,7 +1052,7 @@ L1<-L %>%
             ticks = ticks[1], 
             chipmunk = chipmunk[1],
             mouse.trap = mouse.trap[1],
-            #mouse = mean(mouse[!is.na(mouse)]),
+            mouse = mouse[1],
             deer =deer[1],
             acorns = acorns[1],
             repellent = repellent[1],
@@ -1504,4 +1610,223 @@ p
 
 ```
 
+#DL in keras --preparing data
+```{r}
+library(anchors)
+library(caret)
+library(scales)
+load("L2.Rdata")
+L2$row.id = sample(seq(1,dim(L2)[1]), replace = FALSE)
 
+L2$dma.ggl = as.numeric(factor(L2$dma.ggl))
+L2$state = as.numeric(factor(L2$state))
+pred_name_inds = c(1:3, 6:22)
+names= names(L2)[pred_name_inds]
+L2 = replace.value( L2, names=names, from=NA, to=0)
+L2 = data.frame(L2)
+
+DP =createDataPartition(L2$incidence, p = 0.8)
+Train = L2[DP$Resample1,pred_name_inds]
+rown = dim(Train)[1]
+coln = dim(Train)[2]
+train_mat = array(0, dim = c(rown, coln))
+for (a in 1:rown){
+  for (b in 1:coln){
+    train_mat[a,b]=Train[a,b]
+  }
+}
+train_data = train_mat
+
+#test data
+Test = L2[-DP$Resample1,pred_name_inds]
+
+rown = dim(Test)[1]
+coln = dim(Test)[2]
+Test = data.frame(Test)
+test_mat = array(0, dim = c(rown, coln))
+for (a in 1:rown){
+  #print(a)
+  for (b in 1:coln){
+    #print(b)
+    test_mat[a,b]=Test[a,b]
+  }
+}
+test_data = test_mat
+
+train_targets = L2[DP$Resample1,c("incidence.dma")]
+
+test_targets = L2[-DP$Resample1,c("incidence.dma")]
+
+mean <- apply(train_data, 2, mean)
+std <- apply(train_data, 2, sd)
+train_data <- scale(train_data, center = mean, scale = std)
+test_data <- scale(test_data, center = mean, scale = std)
+
+```
+
+#load keras
+```{r}
+library(keras)#loads keras
+install_keras()#install Tensorflow
+
+```
+
+#building network in keras
+```{r}
+# Because we will need to instantiate the same model multiple times,
+# we use a function to construct it.
+build_model <- function() {
+  model <- keras_model_sequential() %>% 
+    layer_dense(units = 64, activation = "relu", 
+                input_shape = dim(train_data)[[2]]) %>%
+    layer_dropout(rate = 0.5) %>%
+    layer_dense(units = 64, activation = "relu") %>% 
+    layer_dropout(rate = 0.5) %>%
+    layer_dense(units = 1) 
+    
+  model %>% compile(
+    optimizer = "rmsprop", 
+    loss = "mse", 
+    metrics = c("mae")
+  )
+}
+```
+
+#k-fold validation
+#seems warnings about dtype can be ignored:
+#https://github.com/ContinuumIO/anaconda-issues/issues/6678
+```{r}
+k <- 4
+indices <- sample(1:nrow(train_data))
+folds <- cut(1:length(indices), breaks = k, labels = FALSE) 
+num_epochs <- 100
+all_scores <- c()
+for (i in 1:k) {
+  cat("processing fold #", i, "\n")
+  # Prepare the validation data: data from partition # k
+  val_indices <- which(folds == i, arr.ind = TRUE) 
+  val_data <- train_data[val_indices,]
+  val_targets <- train_targets[val_indices]
+  
+  # Prepare the training data: data from all other partitions
+  partial_train_data <- train_data[-val_indices,]
+  partial_train_targets <- train_targets[-val_indices]
+  
+  # Build the Keras model (already compiled)
+  model <- build_model()
+  
+  # Train the model (in silent mode, verbose=0)
+  model %>% fit(partial_train_data, partial_train_targets,
+                epochs = num_epochs, batch_size = 1, verbose = 0)
+                
+  # Evaluate the model on the validation data
+  results <- model %>% evaluate(val_data, val_targets, verbose = 0)
+  all_scores <- c(all_scores, results$mean_absolute_error)
+}  
+```
+
+#get scores
+```{r}
+all_scores
+mean(all_scores)
+median(train_targets)
+```
+
+#some memory cleanup
+```{r}
+k_clear_session()
+
+```
+
+#run for same number of epochs and save output
+```{r}
+num_epochs <- 100
+all_mae_histories <- NULL
+for (i in 1:k) {
+  cat("processing fold #", i, "\n")
+  
+  # Prepare the validation data: data from partition # k
+  val_indices <- which(folds == i, arr.ind = TRUE)
+  val_data <- train_data[val_indices,]
+  val_targets <- train_targets[val_indices]
+  
+  # Prepare the training data: data from all other partitions
+  partial_train_data <- train_data[-val_indices,]
+  partial_train_targets <- train_targets[-val_indices]
+  
+  # Build the Keras model (already compiled)
+  model <- build_model()
+  
+  # Train the model (in silent mode, verbose=0)
+  history <- model %>% fit(
+    partial_train_data, partial_train_targets,
+    validation_data = list(val_data, val_targets),
+    epochs = num_epochs, batch_size = 1, verbose = 0
+  )
+  mae_history <- history$metrics$val_mean_absolute_error
+  all_mae_histories <- rbind(all_mae_histories, mae_history)
+}
+```
+
+#compute average of the per-epoch MAE scores
+```{r}
+average_mae_history <- data.frame(
+  epoch = seq(1:ncol(all_mae_histories)),
+  validation_mae = apply(all_mae_histories, 2, mean)
+)
+```
+
+#plot MAE over epoch
+```{r}
+library(ggplot2)
+average_mae_history[c(1:20),]#looks like lowest is epoch 8
+ggplot(average_mae_history, aes(x = epoch, y = validation_mae)) + geom_smooth()+
+  geom_line()
+```
+
+#some memory cleanup
+```{r}
+k_clear_session()
+
+```
+
+
+#k-fold validation
+#seems warnings about dtype can be ignored:
+#https://github.com/ContinuumIO/anaconda-issues/issues/6678
+```{r}
+k <- 4
+indices <- sample(1:nrow(train_data))
+folds <- cut(1:length(indices), breaks = k, labels = FALSE) 
+num_epochs <- 8
+all_scores <- c()
+for (i in 1:k) {
+  cat("processing fold #", i, "\n")
+  # Prepare the validation data: data from partition # k
+  val_indices <- which(folds == i, arr.ind = TRUE) 
+  val_data <- train_data[val_indices,]
+  val_targets <- train_targets[val_indices]
+  
+  # Prepare the training data: data from all other partitions
+  partial_train_data <- train_data[-val_indices,]
+  partial_train_targets <- train_targets[-val_indices]
+  
+  # Build the Keras model (already compiled)
+  model <- build_model()
+  
+  # Train the model (in silent mode, verbose=0)
+  model %>% fit(partial_train_data, partial_train_targets,
+                epochs = num_epochs, batch_size = 1, verbose = 0)
+                
+  # Evaluate the model on the validation data
+  results <- model %>% evaluate(val_data, val_targets, verbose = 0)
+  all_scores <- c(all_scores, results$mean_absolute_error)
+}  
+```
+
+#get scores
+```{r}
+all_scores
+mean(all_scores)
+median(train_targets)
+```

@@ -109,6 +109,33 @@ Ilya
     ## 
     ##     extract
 
+    ## Loading required package: rgenoud
+
+    ## ##  rgenoud (Version 5.8-2.0, Build Date: 2018-04-03)
+    ## ##  See http://sekhon.berkeley.edu/rgenoud for additional documentation.
+    ## ##  Please cite software as:
+    ## ##   Walter Mebane, Jr. and Jasjeet S. Sekhon. 2011.
+    ## ##   ``Genetic Optimization Using Derivatives: The rgenoud package for R.''
+    ## ##   Journal of Statistical Software, 42(11): 1-26. 
+    ## ##
+
+    ## Loading required package: MASS
+
+    ## 
+    ## Attaching package: 'MASS'
+
+    ## The following object is masked from 'package:dplyr':
+    ## 
+    ##     select
+
+    ## The following objects are masked from 'package:raster':
+    ## 
+    ##     area, select
+
+    ## 
+    ## ##  anchors (Version 3.0-8, Build Date: 2014-02-24)
+    ## ##  See http://wand.stanford.edu/anchors for additional documentation and support.
+
     ## Downloading GitHub repo PMassicotte/gtrendsR@master
     ## from URL https://api.github.com/repos/PMassicotte/gtrendsR/zipball/master
 
@@ -116,7 +143,7 @@ Ilya
 
     ## '/Library/Frameworks/R.framework/Resources/bin/R' --no-site-file  \
     ##   --no-environ --no-save --no-restore --quiet CMD INSTALL  \
-    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/Rtmpn45iEW/devtools10b57d77099f/PMassicotte-gtrendsR-35d98c0'  \
+    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/Rtmp7nspDD/devtools74d41150494/PMassicotte-gtrendsR-a7ceb95'  \
     ##   --library='/Library/Frameworks/R.framework/Versions/3.4/Resources/library'  \
     ##   --install-tests
 
@@ -170,20 +197,8 @@ test case getting google trends data
 devtools::install_github("PMassicotte/gtrendsR", branch = "low-search-volume") #use version for getting low search volume regions
 ```
 
-    ## Downloading GitHub repo PMassicotte/gtrendsR@master
-    ## from URL https://api.github.com/repos/PMassicotte/gtrendsR/zipball/master
-
-    ## Installing gtrendsR
-
-    ## '/Library/Frameworks/R.framework/Resources/bin/R' --no-site-file  \
-    ##   --no-environ --no-save --no-restore --quiet CMD INSTALL  \
-    ##   '/private/var/folders/0d/qm_pqljx11s_ddc42g1_yscr0000gn/T/Rtmpn45iEW/devtools10b576f69d35/PMassicotte-gtrendsR-35d98c0'  \
-    ##   --library='/Library/Frameworks/R.framework/Versions/3.4/Resources/library'  \
-    ##   --install-tests
-
-    ## 
-
-    ## Reloading installed gtrendsR
+    ## Skipping install of 'gtrendsR' from a github remote, the SHA1 (a7ceb958) has not changed since last install.
+    ##   Use `force = TRUE` to force installation
 
 ``` r
 library(gtrendsR) 
@@ -195,8 +210,8 @@ gt_dma <- gt$interest_by_dma
 unique(gt_dma$hits)
 ```
 
-    ##  [1] 100  89  78  56  42  36  34  32  30  27  26  25  20  19  18  17  16
-    ## [18]  15  14  12  11  10   9   8   7   6   5   4   3   2   1  NA
+    ##  [1] 100  85  54  44  41  40  37  36  34  33  23  21  20  18  17  16  15
+    ## [18]  14  12  11  10   9   8   7   6   5   4   3   2   1  NA
 
 ``` r
 gt_no_low <- gtrends(keyword = "tick bite", geo = c("US"), time = time, category = 0, hl = "en-US", low_search_volume = FALSE)
@@ -204,11 +219,11 @@ gt_no_low_dma<- gt_no_low$interest_by_dma
 unique(gt_no_low_dma$hits)
 ```
 
-    ##  [1] 100  69  55  48  45  42  40  38  32  26  23  22  21  20  17  16  15
-    ## [18]  14  12  10   9   8   7   6   5   4   3  NA
+    ##  [1] 100  85  54  44  41  40  37  36  34  33  23  21  20  18  17  16  15
+    ## [18]  14  12  11  10   9   8   7   6   5   4   3   2   1  NA
 
-get google trends data
-======================
+get google trends data -- annual
+================================
 
 ##### We used the term "tick bite", and the top 10 related queries for that term. We excluded queries related to tick species other than the blacklegged tick (Ixodes scapularis), and related to tick encounters with pets. We also excluded queries such as "what does tick bite look like", that contain within it other search terms already included (in this case, "tick bite"). We also included several search terms related to ecological factors (e.g. "deer") and behavioral factors (e.g. "repellent") that may mediate risk. Google Trends values are from 0 to 100. Values reflect the popularity of a search term, relative to the popularity of other search terms within a geographical area.
 
@@ -780,7 +795,7 @@ L1 = merge(Lc, gt, by = c("dma.ggl", "year"))
 save(L1, file = "L1.Rdata")
 ```
 
-##### summarize by county across time for plotting
+##### summarize by county across time for plotting - not for use in data analysis
 
 ``` r
 load("L1.Rdata")
@@ -1302,6 +1317,623 @@ leaflet(outC) %>%
 
 ![](tick_searches_files/figure-markdown_github/deet-1.png)
 
+read in L1 data, do linear regression
+=====================================
+
+``` r
+library(lme4)
+```
+
+    ## Loading required package: Matrix
+
+    ## 
+    ## Attaching package: 'Matrix'
+
+    ## The following object is masked from 'package:tidyr':
+    ## 
+    ##     expand
+
+``` r
+library(ggplot2)
+library(lmerTest)
+```
+
+    ## 
+    ## Attaching package: 'lmerTest'
+
+    ## The following object is masked from 'package:lme4':
+    ## 
+    ##     lmer
+
+    ## The following object is masked from 'package:stats':
+    ## 
+    ##     step
+
+``` r
+require(MuMIn)
+```
+
+    ## Loading required package: MuMIn
+
+``` r
+load("L1.Rdata")
+summary(L1)
+```
+
+    ##    dma.ggl               year      county_state           Cases         
+    ##  Length:39468       Min.   :2004   Length:39468       Min.   :   0.000  
+    ##  Class :character   1st Qu.:2007   Class :character   1st Qu.:   0.000  
+    ##  Mode  :character   Median :2010   Mode  :character   Median :   0.000  
+    ##                     Mean   :2010                      Mean   :   9.784  
+    ##                     3rd Qu.:2013                      3rd Qu.:   1.000  
+    ##                     Max.   :2016                      Max.   :1398.000  
+    ##                                                                         
+    ##  county_name           state_name       state             population      
+    ##  Length:39468       Texas   : 3302   Length:39468       Min.   :      55  
+    ##  Class :character   Georgia : 2067   Class :character   1st Qu.:   11052  
+    ##  Mode  :character   Virginia: 1716   Mode  :character   Median :   25648  
+    ##                     Kentucky: 1560                      Mean   :   99115  
+    ##                     Missouri: 1495                      3rd Qu.:   65986  
+    ##                     Kansas  : 1365                      Max.   :10137915  
+    ##                     (Other) :27963                                        
+    ##    incidence       state_county_fp      tick.bite          garden      
+    ##  Min.   :  0.000   Length:39468       Min.   :  0.00   Min.   :  0.00  
+    ##  1st Qu.:  0.000   Class :character   1st Qu.:  1.00   1st Qu.: 31.00  
+    ##  Median :  0.000   Mode  :character   Median : 12.00   Median : 36.00  
+    ##  Mean   :  8.870                      Mean   : 15.96   Mean   : 37.72  
+    ##  3rd Qu.:  0.831                      3rd Qu.: 24.00   3rd Qu.: 43.00  
+    ##  Max.   :923.276                      Max.   :100.00   Max.   :100.00  
+    ##                                                                        
+    ##      mowing           tick            hiking          hunting      
+    ##  Min.   :  0.0   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
+    ##  1st Qu.: 10.0   1st Qu.: 20.00   1st Qu.: 16.00   1st Qu.: 16.00  
+    ##  Median : 21.0   Median : 30.00   Median : 22.00   Median : 26.00  
+    ##  Mean   : 24.1   Mean   : 30.69   Mean   : 25.63   Mean   : 29.89  
+    ##  3rd Qu.: 35.0   3rd Qu.: 40.00   3rd Qu.: 30.00   3rd Qu.: 39.00  
+    ##  Max.   :100.0   Max.   :100.00   Max.   :100.00   Max.   :100.00  
+    ##                                                                    
+    ##       deet          repellent       deer.tick        tick bites    
+    ##  Min.   :  0.00   Min.   :  0.0   Min.   :  0.00   Min.   :  0.00  
+    ##  1st Qu.:  0.00   1st Qu.: 11.0   1st Qu.:  0.00   1st Qu.:  0.00  
+    ##  Median : 16.00   Median : 25.0   Median :  8.00   Median :  8.00  
+    ##  Mean   : 17.81   Mean   : 27.2   Mean   : 12.67   Mean   : 14.75  
+    ##  3rd Qu.: 27.00   3rd Qu.: 42.0   3rd Qu.: 17.00   3rd Qu.: 23.00  
+    ##  Max.   :100.00   Max.   :100.0   Max.   :100.00   Max.   :100.00  
+    ##                                   NA's   :1473                     
+    ##      ticks           chipmunk        mouse.trap          deer       
+    ##  Min.   :  0.00   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
+    ##  1st Qu.: 15.00   1st Qu.: 12.00   1st Qu.:  0.00   1st Qu.: 19.00  
+    ##  Median : 23.00   Median : 23.00   Median : 24.00   Median : 28.00  
+    ##  Mean   : 23.97   Mean   : 22.45   Mean   : 26.06   Mean   : 31.11  
+    ##  3rd Qu.: 32.00   3rd Qu.: 30.00   3rd Qu.: 43.00   3rd Qu.: 40.00  
+    ##  Max.   :100.00   Max.   :100.00   Max.   :100.00   Max.   :100.00  
+    ##                   NA's   :3036     NA's   :3036     NA's   :6072    
+    ##      acorns           mouse       
+    ##  Min.   :  0.00   Min.   :  0.00  
+    ##  1st Qu.:  2.00   1st Qu.: 36.00  
+    ##  Median : 12.00   Median : 55.00  
+    ##  Mean   : 16.22   Mean   : 50.77  
+    ##  3rd Qu.: 24.00   3rd Qu.: 63.00  
+    ##  Max.   :100.00   Max.   :100.00  
+    ##  NA's   :6072     NA's   :3036
+
+``` r
+L1$tick.bites = L1[,20]
+m1 = lmer(incidence ~ tick.bite+tick+ticks +tick.bites+(1|dma.ggl), data = L1)
+summary(m1)
+```
+
+    ## Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+    ## lmerModLmerTest]
+    ## Formula: incidence ~ tick.bite + tick + ticks + tick.bites + (1 | dma.ggl)
+    ##    Data: L1
+    ## 
+    ## REML criterion at convergence: 373573.9
+    ## 
+    ## Scaled residuals: 
+    ##     Min      1Q  Median      3Q     Max 
+    ## -4.2514 -0.1055 -0.0226  0.0580 30.2024 
+    ## 
+    ## Random effects:
+    ##  Groups   Name        Variance Std.Dev.
+    ##  dma.ggl  (Intercept) 500.6    22.37   
+    ##  Residual             739.2    27.19   
+    ## Number of obs: 39468, groups:  dma.ggl, 183
+    ## 
+    ## Fixed effects:
+    ##              Estimate Std. Error        df t value Pr(>|t|)    
+    ## (Intercept) 3.492e+00  1.707e+00 1.972e+02   2.046   0.0421 *  
+    ## tick.bite   1.359e-01  1.253e-02 3.942e+04  10.843  < 2e-16 ***
+    ## tick        4.285e-02  1.087e-02 3.936e+04   3.943 8.06e-05 ***
+    ## ticks       8.122e-02  1.185e-02 3.941e+04   6.851 7.44e-12 ***
+    ## tick.bites  6.864e-02  1.173e-02 3.932e+04   5.852 4.90e-09 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Correlation of Fixed Effects:
+    ##            (Intr) tick.bt tick   ticks 
+    ## tick.bite   0.030                      
+    ## tick       -0.131 -0.401               
+    ## ticks      -0.114 -0.277  -0.080       
+    ## tick.bites -0.024 -0.174  -0.103 -0.131
+
+``` r
+m2 = lmer(incidence ~ tick.bite+tick+ticks +tick.bites+garden+mowing+hiking+hunting+deer+repellent+deer.tick+chipmunk+mouse.trap+deer+ acorns+ mouse+ (1|dma.ggl), data = L1)
+
+r.squaredGLMM(m1)#conditional is fixed plus random effects
+```
+
+    ##        R2m        R2c 
+    ## 0.01467259 0.41251991
+
+``` r
+r.squaredGLMM(m2)
+```
+
+    ##        R2m        R2c 
+    ## 0.01792293 0.41760589
+
+``` r
+model.sel(m1, m2)
+```
+
+    ## Warning in model.sel.default(m1, m2): models are not all fitted to the same
+    ## data
+
+    ## Model selection table 
+    ##    (Int)    tick tick.bit tick.bts    tcks     acr     chp       der
+    ## m2 3.657 0.02323   0.1053  0.05514 0.06004 0.02074 0.02066 -0.003457
+    ## m1 3.492 0.04285   0.1359  0.06864 0.08122                          
+    ##    der.tick     grd    hkn     hnt     mos   mos.trp     mwn      rpl df
+    ## m2  0.08663 -0.1107 0.1062 0.08356 0.01285 -0.006529 0.01002 -0.06794 18
+    ## m1                                                                     7
+    ##       logLik     AICc    delta weight
+    ## m2 -152377.9 304791.8     0.00      1
+    ## m1 -186787.0 373587.9 68796.09      0
+    ## Models ranked by AICc(x) 
+    ## Random terms (all models): 
+    ## '1 | dma.ggl'
+
+``` r
+L1$incidence.plot = L1$incidence+0.00001
+plot <- ggplot(data = L1, aes(x = tick.bite, y= incidence.plot))+
+  #geom_point(alpha = 0.5, aes(color = factor(dma.ggl)))
+  geom_point(alpha = 0.5)+
+  geom_smooth()+
+  scale_y_log10()
+plot
+```
+
+    ## `geom_smooth()` using method = 'gam' and formula 'y ~ s(x, bs = "cs")'
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-8-1.png)
+
+``` r
+library(rsq)
+#rsq(m1)  
+```
+
+reshape for keras for scalar regression
+=======================================
+
+##### read in shapefile of counties and add to it L1 data, then rasterize
+
+``` r
+require(raster)
+library(rgdal)
+```
+
+    ## rgdal: version: 1.3-3, (SVN revision 759)
+    ##  Geospatial Data Abstraction Library extensions to R successfully loaded
+    ##  Loaded GDAL runtime: GDAL 2.1.3, released 2017/20/01
+    ##  Path to GDAL shared files: /Library/Frameworks/R.framework/Versions/3.4/Resources/library/sf/gdal
+    ##  GDAL binary built with GEOS: FALSE 
+    ##  Loaded PROJ.4 runtime: Rel. 4.9.3, 15 August 2016, [PJ_VERSION: 493]
+    ##  Path to PROJ.4 shared files: /Library/Frameworks/R.framework/Versions/3.4/Resources/library/sf/proj
+    ##  Linking to sp version: 1.2-7
+
+``` r
+C <- shapefile("/Users/fischhoff/app_wild/tick_searches/age_codes/cb_2017_us_county_500k.shp")
+C$COUNTYFP=as.numeric(as.character(C$COUNTYFP))
+C$STATEFP=as.numeric(as.character(C$STATEFP))
+C$state_county_fp = paste(C$STATEFP, C$COUNTYFP)
+load("L1.Rdata")
+
+L = L1
+L$dma.ggl = as.numeric(factor(L$dma.ggl))
+L$state = as.numeric(factor(L$state))
+pred_name_inds = c(1,2, 7:26)
+names= names(L)[pred_name_inds]
+L = replace.value( L, names=names, from=NA, to=0)
+
+DP =createDataPartition(L$incidence, p = 0.8)
+Train = L[DP$Resample1,]
+train_data = Train[,pred_name_inds]
+train_targets= Train[,c("year", "incidence", "state_county_fp")]#needs to be reshaped
+Test = L[-DP$Resample1,]
+test_data = Test[,pred_name_inds]
+test_targets= Test[,c("year", "incidence", "state_county_fp")]
+
+Train = data.frame(Train)
+uyear = unique(train_data$year)
+nimage = 180
+
+a = 1
+L_yr = subset(train_data, year == uyear[a])
+outC <- append_data(C, L_yr, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+```
+
+    ## Under coverage: 785 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+``` r
+pred_names = names(outC[c(13:31)])
+
+#matrix for train data
+
+#4D tensor with shape: (batch, channels, rows, cols) if data_format is #"channels_first"
+train_data_mat = array(0, dim = c(length(uyear), length(pred_names), nimage, nimage))
+a = 1
+b = 10
+for (a in 1:length(uyear)){#for loop through years
+  print(a)
+      L_yr = subset(train_data, year == uyear[a])
+    outC <- append_data(C, L_yr, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+  for (b in 1:length(pred_names)){#for loop through predictors
+    print(b)
+    r <- raster(ncol=nimage, nrow=nimage)
+  extent(r) <- extent(outC)
+  rp <- rasterize(outC, r, pred_names[b])
+  rp_mat = raster::as.array(rp)
+  train_data_mat[a, b, ,]=rp_mat
+  }
+}
+```
+
+    ## [1] 1
+
+    ## Under coverage: 785 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 2
+
+    ## Under coverage: 809 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 3
+
+    ## Under coverage: 779 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 4
+
+    ## Under coverage: 813 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 5
+
+    ## Under coverage: 839 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 6
+
+    ## Under coverage: 807 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 7
+
+    ## Under coverage: 782 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 8
+
+    ## Under coverage: 781 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 9
+
+    ## Under coverage: 794 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 10
+
+    ## Under coverage: 838 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 11
+
+    ## Under coverage: 799 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 12
+
+    ## Under coverage: 827 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+    ## [1] 13
+
+    ## Under coverage: 801 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## [1] 1
+    ## [1] 2
+    ## [1] 3
+    ## [1] 4
+    ## [1] 5
+    ## [1] 6
+    ## [1] 7
+    ## [1] 8
+    ## [1] 9
+    ## [1] 10
+    ## [1] 11
+    ## [1] 12
+    ## [1] 13
+    ## [1] 14
+    ## [1] 15
+    ## [1] 16
+    ## [1] 17
+    ## [1] 18
+    ## [1] 19
+
+``` r
+train_targets_mat = array(0, dim = c(length(uyear), 1, nimage, nimage))
+
+for (a in 1:length(uyear)){#for loop through years
+      L_yr = subset(train_targets, year == uyear[a])
+    outC <- append_data(C, L_yr, key.shp = "state_county_fp", key.data = "state_county_fp",
+                    ignore.duplicates = TRUE)
+#  for (b in 1:length(pred_names)){#for loop through predictors
+    r <- raster(ncol=nimage, nrow=nimage)
+  extent(r) <- extent(outC)
+  rp <- rasterize(outC, r, "incidence")
+  rp_mat = raster::as.array(rp)
+  train_targets_mat[a, 1, , ]=rp_mat
+#  }
+}
+```
+
+    ## Under coverage: 785 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 809 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 779 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 813 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 839 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 807 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 782 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 781 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 794 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 838 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 799 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 827 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
+    ## Under coverage: 801 out of 3233 shape features did not get appended data. Run under_coverage() to get the corresponding feature id numbers and key values.
+
 ##### summarize by dma -- test with one variable
 
 ``` r
@@ -1351,13 +1983,13 @@ summary(L2)
     ##                     Mean   :2010   Mean   : 1644339   Mean   : 162.3  
     ##                     3rd Qu.:2013   3rd Qu.: 1903494   3rd Qu.:  20.0  
     ##                     Max.   :2016   Max.   :21955677   Max.   :8238.0  
-    ##  incidence.dma           deet           state          
-    ##  Min.   :  0.0000   Min.   :  0.00   Length:2379       
-    ##  1st Qu.:  0.0000   1st Qu.:  0.00   Class :character  
-    ##  Median :  0.4248   Median : 13.00   Mode  :character  
-    ##  Mean   :  7.8521   Mean   : 17.27                     
-    ##  3rd Qu.:  1.6906   3rd Qu.: 29.00                     
-    ##  Max.   :268.9252   Max.   :100.00
+    ##  incidence.dma           deet          state          
+    ##  Min.   :  0.0000   Min.   :  0.0   Length:2379       
+    ##  1st Qu.:  0.0000   1st Qu.:  0.0   Class :character  
+    ##  Median :  0.4248   Median : 13.0   Mode  :character  
+    ##  Mean   :  7.8521   Mean   : 16.6                     
+    ##  3rd Qu.:  1.6906   3rd Qu.: 27.0                     
+    ##  Max.   :268.9252   Max.   :100.0
 
 ##### summarize by dma
 
@@ -1381,7 +2013,7 @@ L1<-L %>%
             ticks = ticks[1], 
             chipmunk = chipmunk[1],
             mouse.trap = mouse.trap[1],
-            #mouse = mean(mouse[!is.na(mouse)]),
+            mouse = mouse[1],
             deer =deer[1],
             acorns = acorns[1],
             repellent = repellent[1],
@@ -1409,45 +2041,45 @@ summary(L2)
     ##                     3rd Qu.:2013   3rd Qu.: 1903494   3rd Qu.:  20.0  
     ##                     Max.   :2016   Max.   :21955677   Max.   :8238.0  
     ##                                                                       
-    ##  incidence.dma          garden           mowing          hunting      
-    ##  Min.   :  0.0000   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
-    ##  1st Qu.:  0.0000   1st Qu.: 30.00   1st Qu.:  6.00   1st Qu.: 15.00  
-    ##  Median :  0.4248   Median : 36.00   Median : 16.00   Median : 23.00  
-    ##  Mean   :  7.8521   Mean   : 36.99   Mean   : 20.24   Mean   : 27.08  
-    ##  3rd Qu.:  1.6906   3rd Qu.: 43.00   3rd Qu.: 30.00   3rd Qu.: 35.00  
-    ##  Max.   :268.9252   Max.   :100.00   Max.   :100.00   Max.   :100.00  
-    ##                                                                       
-    ##       tick          deer.tick        tick.bite       tick.bites    
-    ##  Min.   :  0.00   Min.   :  0.00   Min.   :  0.0   Min.   :  0.00  
-    ##  1st Qu.: 17.00   1st Qu.:  0.00   1st Qu.:  0.0   1st Qu.:  0.00  
-    ##  Median : 27.00   Median :  4.00   Median : 13.0   Median :  0.00  
-    ##  Mean   : 29.54   Mean   : 10.69   Mean   : 17.9   Mean   : 12.08  
-    ##  3rd Qu.: 39.00   3rd Qu.: 15.00   3rd Qu.: 28.0   3rd Qu.: 20.00  
-    ##  Max.   :100.00   Max.   :100.00   Max.   :100.0   Max.   :100.00  
-    ##                                                                    
-    ##      ticks           chipmunk        mouse.trap          deer       
+    ##  incidence.dma          garden          mowing          hunting      
+    ##  Min.   :  0.0000   Min.   :  0.0   Min.   :  0.00   Min.   :  0.00  
+    ##  1st Qu.:  0.0000   1st Qu.: 30.0   1st Qu.:  7.00   1st Qu.: 16.00  
+    ##  Median :  0.4248   Median : 36.0   Median : 19.00   Median : 26.00  
+    ##  Mean   :  7.8521   Mean   : 36.9   Mean   : 22.16   Mean   : 30.26  
+    ##  3rd Qu.:  1.6906   3rd Qu.: 42.0   3rd Qu.: 32.00   3rd Qu.: 40.00  
+    ##  Max.   :268.9252   Max.   :100.0   Max.   :100.00   Max.   :100.00  
+    ##                                                                      
+    ##       tick          deer.tick        tick.bite        tick.bites    
     ##  Min.   :  0.00   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
-    ##  1st Qu.: 12.00   1st Qu.: 12.00   1st Qu.:  0.00   1st Qu.: 22.00  
-    ##  Median : 18.00   Median : 23.00   Median : 16.00   Median : 33.00  
-    ##  Mean   : 19.63   Mean   : 23.46   Mean   : 21.96   Mean   : 35.54  
-    ##  3rd Qu.: 25.00   3rd Qu.: 32.00   3rd Qu.: 39.00   3rd Qu.: 45.00  
+    ##  1st Qu.: 18.00   1st Qu.:  0.00   1st Qu.:  0.00   1st Qu.:  0.00  
+    ##  Median : 30.00   Median :  5.00   Median : 10.00   Median :  0.00  
+    ##  Mean   : 31.14   Mean   : 11.74   Mean   : 15.26   Mean   : 12.45  
+    ##  3rd Qu.: 41.00   3rd Qu.: 16.00   3rd Qu.: 24.00   3rd Qu.: 20.00  
     ##  Max.   :100.00   Max.   :100.00   Max.   :100.00   Max.   :100.00  
-    ##                   NA's   :183      NA's   :183      NA's   :366     
-    ##      acorns      repellent          hiking            deet       
-    ##  Min.   :  0   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
-    ##  1st Qu.:  0   1st Qu.: 11.00   1st Qu.: 17.00   1st Qu.:  0.00  
-    ##  Median : 12   Median : 27.00   Median : 23.00   Median : 13.00  
-    ##  Mean   : 16   Mean   : 28.18   Mean   : 27.84   Mean   : 17.27  
-    ##  3rd Qu.: 25   3rd Qu.: 43.00   3rd Qu.: 35.00   3rd Qu.: 29.00  
-    ##  Max.   :100   Max.   :100.00   Max.   :100.00   Max.   :100.00  
-    ##  NA's   :366                                                     
-    ##     state          
-    ##  Length:2379       
-    ##  Class :character  
-    ##  Mode  :character  
-    ##                    
-    ##                    
-    ##                    
+    ##                   NA's   :104                                       
+    ##      ticks           chipmunk        mouse.trap         mouse       
+    ##  Min.   :  0.00   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
+    ##  1st Qu.: 14.00   1st Qu.: 11.00   1st Qu.:  0.00   1st Qu.: 35.00  
+    ##  Median : 23.00   Median : 22.00   Median : 16.00   Median : 55.00  
+    ##  Mean   : 24.77   Mean   : 22.35   Mean   : 21.24   Mean   : 51.43  
+    ##  3rd Qu.: 33.00   3rd Qu.: 31.00   3rd Qu.: 37.00   3rd Qu.: 64.00  
+    ##  Max.   :100.00   Max.   :100.00   Max.   :100.00   Max.   :100.00  
+    ##                   NA's   :183      NA's   :183      NA's   :183     
+    ##       deer            acorns         repellent          hiking      
+    ##  Min.   :  0.00   Min.   :  0.00   Min.   :  0.00   Min.   :  0.00  
+    ##  1st Qu.: 19.00   1st Qu.:  0.00   1st Qu.: 11.00   1st Qu.: 16.00  
+    ##  Median : 28.00   Median : 11.00   Median : 25.00   Median : 22.00  
+    ##  Mean   : 31.07   Mean   : 15.67   Mean   : 27.43   Mean   : 25.81  
+    ##  3rd Qu.: 40.00   3rd Qu.: 23.00   3rd Qu.: 42.00   3rd Qu.: 31.00  
+    ##  Max.   :100.00   Max.   :100.00   Max.   :100.00   Max.   :100.00  
+    ##  NA's   :366      NA's   :366                                       
+    ##       deet          state          
+    ##  Min.   :  0.0   Length:2379       
+    ##  1st Qu.:  0.0   Class :character  
+    ##  Median : 13.0   Mode  :character  
+    ##  Mean   : 16.6                     
+    ##  3rd Qu.: 27.0                     
+    ##  Max.   :100.0                     
     ## 
 
 ##### predict cases, predictors include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 10000, lr 0.001
@@ -1559,7 +2191,7 @@ print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
 ```
 
-    ## [1] 0.9188009
+    ## [1] 0.9125059
 
 ``` r
 # print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
@@ -1571,7 +2203,7 @@ save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-11-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
 ``` r
 #write results to csv
@@ -1591,22 +2223,22 @@ print(x.df)
 ```
 
     ##      variable relative.influence
-    ## 1     pop.dma             59.799
-    ## 2   deer.tick             23.966
-    ## 3  tick.bites              4.642
-    ## 4   tick.bite              3.658
-    ## 5      garden              2.004
-    ## 6        deer              1.088
-    ## 7     hunting              0.859
-    ## 8      acorns              0.729
-    ## 9      hiking              0.714
-    ## 10       tick              0.581
-    ## 11      ticks              0.532
-    ## 12     mowing              0.492
-    ## 13  repellent              0.448
-    ## 14 mouse.trap              0.201
-    ## 15   chipmunk              0.197
-    ## 16       deet              0.090
+    ## 1     pop.dma             60.959
+    ## 2   deer.tick             21.609
+    ## 3  tick.bites              5.106
+    ## 4   tick.bite              3.522
+    ## 5      garden              2.347
+    ## 6      hiking              1.660
+    ## 7        tick              1.541
+    ## 8     hunting              0.867
+    ## 9    chipmunk              0.684
+    ## 10      ticks              0.458
+    ## 11     acorns              0.331
+    ## 12       deer              0.316
+    ## 13 mouse.trap              0.254
+    ## 14       deet              0.125
+    ## 15     mowing              0.113
+    ## 16  repellent              0.109
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -1623,7 +2255,7 @@ ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-11-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-12-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
@@ -1645,7 +2277,7 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-12-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-13-1.png)
 
 ##### predict cases, predictors include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
 
@@ -1683,7 +2315,7 @@ print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
 ```
 
-    ## [1] 0.9910489
+    ## [1] 0.990378
 
 ``` r
 # print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
@@ -1695,7 +2327,7 @@ save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-13-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-14-1.png)
 
 ``` r
 #write results to csv
@@ -1715,22 +2347,22 @@ print(x.df)
 ```
 
     ##      variable relative.influence
-    ## 1     pop.dma             57.122
-    ## 2   deer.tick             23.463
-    ## 3  tick.bites              5.012
-    ## 4   tick.bite              3.813
-    ## 5      garden              2.101
-    ## 6        deer              1.594
-    ## 7     hunting              1.138
-    ## 8      hiking              0.936
-    ## 9      acorns              0.861
-    ## 10       tick              0.767
-    ## 11     mowing              0.734
-    ## 12      ticks              0.693
-    ## 13  repellent              0.621
-    ## 14 mouse.trap              0.444
-    ## 15   chipmunk              0.439
-    ## 16       deet              0.261
+    ## 1     pop.dma             58.601
+    ## 2   deer.tick             21.341
+    ## 3  tick.bites              5.240
+    ## 4   tick.bite              3.640
+    ## 5      garden              2.534
+    ## 6      hiking              1.716
+    ## 7        tick              1.666
+    ## 8     hunting              1.221
+    ## 9    chipmunk              0.971
+    ## 10      ticks              0.655
+    ## 11       deer              0.587
+    ## 12     acorns              0.490
+    ## 13 mouse.trap              0.474
+    ## 14       deet              0.362
+    ## 15     mowing              0.259
+    ## 16  repellent              0.244
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -1750,7 +2382,7 @@ ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-13-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-14-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
@@ -1772,7 +2404,7 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-14-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-1.png)
 
 ####### predict cases, predictors DO NOT include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
 
@@ -1810,7 +2442,7 @@ print(1-sum((Train$Cases.dma - predict(gbm.dma, newdata=Train, n.trees =ntrees,
         sum((Train$Cases.dma - mean(Train$Cases.dma))^2))
 ```
 
-    ## [1] 0.9803489
+    ## [1] 0.9775653
 
 ``` r
 # print(1-sum((Test$Cases.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
@@ -1822,7 +2454,7 @@ save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
 ``` r
 #write results to csv
@@ -1842,21 +2474,21 @@ print(x.df)
 ```
 
     ##      variable relative.influence
-    ## 1     hunting             24.949
-    ## 2   deer.tick             24.143
-    ## 3      garden             16.805
-    ## 4  tick.bites              7.364
-    ## 5        deer              5.846
-    ## 6   repellent              3.655
-    ## 7   tick.bite              3.177
-    ## 8        deet              2.681
-    ## 9  mouse.trap              2.648
-    ## 10     hiking              1.990
-    ## 11     acorns              1.641
-    ## 12     mowing              1.573
-    ## 13       tick              1.328
-    ## 14   chipmunk              1.316
-    ## 15      ticks              0.886
+    ## 1   deer.tick             24.117
+    ## 2     hunting             20.742
+    ## 3      garden             17.038
+    ## 4  tick.bites              5.482
+    ## 5   tick.bite              5.069
+    ## 6        deer              4.696
+    ## 7   repellent              4.349
+    ## 8      hiking              3.883
+    ## 9        deet              3.743
+    ## 10 mouse.trap              2.912
+    ## 11     mowing              2.170
+    ## 12     acorns              1.767
+    ## 13   chipmunk              1.480
+    ## 14      ticks              1.429
+    ## 15       tick              1.122
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -1876,7 +2508,7 @@ ggplot(data = x.df, aes(x =variable, y = relative.influence))+
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-15-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-16-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
@@ -1898,7 +2530,7 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-16-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-17-1.png)
 
 ##### predict incidence, predictors include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
 
@@ -1937,7 +2569,7 @@ print(1-sum((Train$incidence.dma - predict(gbm.dma, newdata=Train, n.trees =ntre
         sum((Train$incidence.dma - mean(Train$incidence.dma))^2))
 ```
 
-    ## [1] 0.9437506
+    ## [1] 0.9440023
 
 ``` r
 # print(1-sum((Test$incidence.dma - predict(gbm.dma, newdata=Test, n.trees =ntrees,
@@ -1950,7 +2582,7 @@ save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-17-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-18-1.png)
 
 ``` r
 #write results to csv
@@ -1970,22 +2602,22 @@ print(x.df)
 ```
 
     ##      variable relative.influence
-    ## 1   deer.tick             35.436
-    ## 2     pop.dma             12.266
-    ## 3   tick.bite             10.410
-    ## 4        deer              6.993
-    ## 5      acorns              6.585
-    ## 6        tick              4.234
-    ## 7  mouse.trap              3.275
-    ## 8    chipmunk              3.146
-    ## 9     hunting              2.983
-    ## 10      ticks              2.685
-    ## 11 tick.bites              2.651
-    ## 12     hiking              2.589
-    ## 13  repellent              1.789
-    ## 14     mowing              1.748
-    ## 15       deet              1.745
-    ## 16     garden              1.466
+    ## 1   deer.tick             33.377
+    ## 2     pop.dma             12.293
+    ## 3   tick.bite              6.991
+    ## 4      acorns              6.893
+    ## 5     hunting              6.046
+    ## 6        deer              5.056
+    ## 7  mouse.trap              4.708
+    ## 8       ticks              4.591
+    ## 9        tick              3.838
+    ## 10 tick.bites              3.485
+    ## 11     hiking              3.024
+    ## 12   chipmunk              2.736
+    ## 13  repellent              2.306
+    ## 14     mowing              1.791
+    ## 15       deet              1.646
+    ## 16     garden              1.218
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -2005,7 +2637,7 @@ ggplot(data = x.df, aes(x =variable, y = relative.influence, fill = search))+
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-17-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-18-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
@@ -2027,7 +2659,7 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-18-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-19-1.png)
 
 ##### predict incidence, predictors do not include population: run boosted regression tree analysis -- analyze at dma-level w/ gbm. trees 50000, lr 0.001
 
@@ -2066,7 +2698,7 @@ print(1-sum((Train$incidence.dma - predict(gbm.dma, newdata=Train, n.trees =ntre
         sum((Train$incidence.dma - mean(Train$incidence.dma))^2))
 ```
 
-    ## [1] 0.9186909
+    ## [1] 0.9212673
 
 ``` r
 #get accuracy against test set
@@ -2079,7 +2711,7 @@ save(gbm.dma, file = "gbm.dma.Rdata")
 x = summary(gbm.dma)
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-19-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-20-1.png)
 
 ``` r
 #write results to csv
@@ -2099,21 +2731,21 @@ print(x.df)
 ```
 
     ##      variable relative.influence
-    ## 1   deer.tick             35.601
-    ## 2   tick.bite             11.188
-    ## 3        deer              8.692
-    ## 4      acorns              8.501
-    ## 5        tick              4.776
-    ## 6  mouse.trap              4.489
-    ## 7    chipmunk              4.318
-    ## 8     hunting              3.821
-    ## 9  tick.bites              3.726
-    ## 10      ticks              2.909
-    ## 11     hiking              2.873
-    ## 12     mowing              2.466
-    ## 13  repellent              2.423
-    ## 14       deet              2.416
-    ## 15     garden              1.801
+    ## 1   deer.tick             34.847
+    ## 2      acorns              8.763
+    ## 3   tick.bite              7.468
+    ## 4     hunting              6.854
+    ## 5  mouse.trap              6.397
+    ## 6        deer              5.736
+    ## 7       ticks              5.389
+    ## 8        tick              4.336
+    ## 9  tick.bites              4.109
+    ## 10     hiking              3.542
+    ## 11   chipmunk              3.357
+    ## 12     mowing              2.699
+    ## 13  repellent              2.639
+    ## 14       deet              2.279
+    ## 15     garden              1.585
 
 ``` r
 ind = which(x.df$variable == "pop.dma")
@@ -2133,7 +2765,7 @@ ggplot(data = x.df, aes(x =variable, y = relative.influence))+
   geom_bar(stat="identity")
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-19-2.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-20-2.png)
 
 ``` r
 ggsave("Figure.search.jpg")
@@ -2155,7 +2787,7 @@ p <- ggplot(data = df, aes(x=trees, y = deviance))+
 p
 ```
 
-![](tick_searches_files/figure-markdown_github/unnamed-chunk-20-1.png)
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-21-1.png)
 
 dismo: fit cofeed model, ntrees = 10000, lr = 0.001 -- Cases, including population
 ==================================================================================
@@ -2220,3 +2852,327 @@ dismo: fit cofeed model, ntrees = 10000, lr = 0.001 -- Cases, including populati
 # #ggsave("Figure.2.cofeed.relative.jpg")
 # save(gbm.dismo, file = "gbm.dismo.Rdata")
 ```
+
+DL in keras --preparing data
+============================
+
+``` r
+library(anchors)
+library(caret)
+library(scales)
+load("L2.Rdata")
+L2$row.id = sample(seq(1,dim(L2)[1]), replace = FALSE)
+
+L2$dma.ggl = as.numeric(factor(L2$dma.ggl))
+L2$state = as.numeric(factor(L2$state))
+pred_name_inds = c(1:3, 6:22)
+names= names(L2)[pred_name_inds]
+L2 = replace.value( L2, names=names, from=NA, to=0)
+L2 = data.frame(L2)
+
+DP =createDataPartition(L2$incidence, p = 0.8)
+Train = L2[DP$Resample1,pred_name_inds]
+rown = dim(Train)[1]
+coln = dim(Train)[2]
+train_mat = array(0, dim = c(rown, coln))
+for (a in 1:rown){
+  for (b in 1:coln){
+    train_mat[a,b]=Train[a,b]
+  }
+}
+train_data = train_mat
+
+#test data
+Test = L2[-DP$Resample1,pred_name_inds]
+
+rown = dim(Test)[1]
+coln = dim(Test)[2]
+Test = data.frame(Test)
+test_mat = array(0, dim = c(rown, coln))
+for (a in 1:rown){
+  #print(a)
+  for (b in 1:coln){
+    #print(b)
+    test_mat[a,b]=Test[a,b]
+  }
+}
+test_data = test_mat
+
+train_targets = L2[DP$Resample1,c("incidence.dma")]
+
+test_targets = L2[-DP$Resample1,c("incidence.dma")]
+
+mean <- apply(train_data, 2, mean)
+std <- apply(train_data, 2, sd)
+train_data <- scale(train_data, center = mean, scale = std)
+test_data <- scale(test_data, center = mean, scale = std)
+```
+
+load keras
+==========
+
+``` r
+library(keras)#loads keras
+install_keras()#install Tensorflow
+```
+
+    ## Creating virtualenv for TensorFlow at  ~/.virtualenvs/r-tensorflow 
+    ## Upgrading pip ...
+    ## Upgrading wheel ...
+    ## Upgrading setuptools ...
+    ## Installing TensorFlow ...
+    ## 
+    ## Installation complete.
+
+building network in keras
+=========================
+
+``` r
+# Because we will need to instantiate the same model multiple times,
+# we use a function to construct it.
+build_model <- function() {
+  model <- keras_model_sequential() %>% 
+    layer_dense(units = 64, activation = "relu", 
+                input_shape = dim(train_data)[[2]]) %>%
+    layer_dropout(rate = 0.5) %>%
+    layer_dense(units = 64, activation = "relu") %>% 
+    layer_dropout(rate = 0.5) %>%
+    layer_dense(units = 1) 
+    
+  model %>% compile(
+    optimizer = "rmsprop", 
+    loss = "mse", 
+    metrics = c("mae")
+  )
+}
+```
+
+k-fold validation
+=================
+
+seems warnings about dtype can be ignored:
+==========================================
+
+<https://github.com/ContinuumIO/anaconda-issues/issues/6678>
+============================================================
+
+``` r
+k <- 4
+indices <- sample(1:nrow(train_data))
+folds <- cut(1:length(indices), breaks = k, labels = FALSE) 
+num_epochs <- 100
+all_scores <- c()
+for (i in 1:k) {
+  cat("processing fold #", i, "\n")
+  # Prepare the validation data: data from partition # k
+  val_indices <- which(folds == i, arr.ind = TRUE) 
+  val_data <- train_data[val_indices,]
+  val_targets <- train_targets[val_indices]
+  
+  # Prepare the training data: data from all other partitions
+  partial_train_data <- train_data[-val_indices,]
+  partial_train_targets <- train_targets[-val_indices]
+  
+  # Build the Keras model (already compiled)
+  model <- build_model()
+  
+  # Train the model (in silent mode, verbose=0)
+  model %>% fit(partial_train_data, partial_train_targets,
+                epochs = num_epochs, batch_size = 1, verbose = 0)
+                
+  # Evaluate the model on the validation data
+  results <- model %>% evaluate(val_data, val_targets, verbose = 0)
+  all_scores <- c(all_scores, results$mean_absolute_error)
+}  
+```
+
+    ## processing fold # 1 
+    ## processing fold # 2 
+    ## processing fold # 3 
+    ## processing fold # 4
+
+get scores
+==========
+
+``` r
+all_scores
+```
+
+    ## [1] 6.131741 8.874018 5.345030 8.744286
+
+``` r
+mean(all_scores)
+```
+
+    ## [1] 7.273769
+
+``` r
+median(train_targets)
+```
+
+    ## [1] 0.4248542
+
+some memory cleanup
+===================
+
+``` r
+k_clear_session()
+```
+
+run for same number of epochs and save output
+=============================================
+
+``` r
+num_epochs <- 100
+all_mae_histories <- NULL
+for (i in 1:k) {
+  cat("processing fold #", i, "\n")
+  
+  # Prepare the validation data: data from partition # k
+  val_indices <- which(folds == i, arr.ind = TRUE)
+  val_data <- train_data[val_indices,]
+  val_targets <- train_targets[val_indices]
+  
+  # Prepare the training data: data from all other partitions
+  partial_train_data <- train_data[-val_indices,]
+  partial_train_targets <- train_targets[-val_indices]
+  
+  # Build the Keras model (already compiled)
+  model <- build_model()
+  
+  # Train the model (in silent mode, verbose=0)
+  history <- model %>% fit(
+    partial_train_data, partial_train_targets,
+    validation_data = list(val_data, val_targets),
+    epochs = num_epochs, batch_size = 1, verbose = 0
+  )
+  mae_history <- history$metrics$val_mean_absolute_error
+  all_mae_histories <- rbind(all_mae_histories, mae_history)
+}
+```
+
+    ## processing fold # 1 
+    ## processing fold # 2 
+    ## processing fold # 3 
+    ## processing fold # 4
+
+compute average of the per-epoch MAE scores
+===========================================
+
+``` r
+average_mae_history <- data.frame(
+  epoch = seq(1:ncol(all_mae_histories)),
+  validation_mae = apply(all_mae_histories, 2, mean)
+)
+```
+
+plot MAE over epoch
+===================
+
+``` r
+library(ggplot2)
+average_mae_history[c(1:20),]#looks like lowest is epoch 8
+```
+
+    ##    epoch validation_mae
+    ## 1      1       7.744311
+    ## 2      2       7.291939
+    ## 3      3       6.896945
+    ## 4      4       6.643671
+    ## 5      5       6.583371
+    ## 6      6       6.360977
+    ## 7      7       6.359647
+    ## 8      8       6.239744
+    ## 9      9       6.317265
+    ## 10    10       6.287138
+    ## 11    11       6.367192
+    ## 12    12       6.220681
+    ## 13    13       6.358806
+    ## 14    14       6.541164
+    ## 15    15       6.330617
+    ## 16    16       6.218168
+    ## 17    17       6.352088
+    ## 18    18       6.343019
+    ## 19    19       6.656819
+    ## 20    20       6.221958
+
+``` r
+ggplot(average_mae_history, aes(x = epoch, y = validation_mae)) + geom_smooth()+
+  geom_line()
+```
+
+    ## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
+
+![](tick_searches_files/figure-markdown_github/unnamed-chunk-31-1.png)
+
+some memory cleanup
+===================
+
+``` r
+k_clear_session()
+```
+
+k-fold validation
+=================
+
+seems warnings about dtype can be ignored:
+==========================================
+
+<https://github.com/ContinuumIO/anaconda-issues/issues/6678>
+============================================================
+
+``` r
+k <- 4
+indices <- sample(1:nrow(train_data))
+folds <- cut(1:length(indices), breaks = k, labels = FALSE) 
+num_epochs <- 8
+all_scores <- c()
+for (i in 1:k) {
+  cat("processing fold #", i, "\n")
+  # Prepare the validation data: data from partition # k
+  val_indices <- which(folds == i, arr.ind = TRUE) 
+  val_data <- train_data[val_indices,]
+  val_targets <- train_targets[val_indices]
+  
+  # Prepare the training data: data from all other partitions
+  partial_train_data <- train_data[-val_indices,]
+  partial_train_targets <- train_targets[-val_indices]
+  
+  # Build the Keras model (already compiled)
+  model <- build_model()
+  
+  # Train the model (in silent mode, verbose=0)
+  model %>% fit(partial_train_data, partial_train_targets,
+                epochs = num_epochs, batch_size = 1, verbose = 0)
+                
+  # Evaluate the model on the validation data
+  results <- model %>% evaluate(val_data, val_targets, verbose = 0)
+  all_scores <- c(all_scores, results$mean_absolute_error)
+}  
+```
+
+    ## processing fold # 1 
+    ## processing fold # 2 
+    ## processing fold # 3 
+    ## processing fold # 4
+
+get scores
+==========
+
+``` r
+all_scores
+```
+
+    ## [1] 5.546057 7.658791 4.456352 7.796789
+
+``` r
+mean(all_scores)
+```
+
+    ## [1] 6.364497
+
+``` r
+median(train_targets)
+```
+
+    ## [1] 0.4248542
